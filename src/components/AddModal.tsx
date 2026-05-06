@@ -87,13 +87,14 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
 
     const payload = {
       amount: Number(amount),
-      category: category,
+      // NEW: Safe fallback to "General" if the category array was empty
+      category: category || (type === 'expense' ? 'General Expense' : 'General Income'),
       type: type,
       is_business_overhead: isBusiness,
       spender: myName,
-      account: account,
+      account: account || availableAccounts[0], // Safe fallback for account too
       notes: notes,
-      transaction_date: new Date(date).toISOString(), // Convert local time back to UTC for database
+      transaction_date: new Date(date).toISOString(),
       family_id: familyId,
     };
 
@@ -113,10 +114,10 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity cursor-pointer" onClick={onClose} />
       
       {/* Added max-h-[90vh] and overflow-y-auto to handle smaller screens */}
-      <div className="relative bg-white dark:bg-gray-900 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 hide-scrollbar">
+      <div className="relative bg-white dark:bg-gray-900 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom-10 z-10 hide-scrollbar">
         
         <div className="sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur flex justify-between items-center p-5 border-b dark:border-gray-800 z-10">
           <h2 className="text-xl font-bold">Add Transaction</h2>

@@ -29,7 +29,6 @@ export default function WalletsPage() {
     setIsLoading(true);
     const familyId = localStorage.getItem("family_id");
     
-    // Get custom wallets from settings, or use defaults
     const savedAccs = localStorage.getItem("custom_accounts");
     const accountList: string[] = savedAccs ? JSON.parse(savedAccs) : ["💵 Cash", "🔵 KBZPay", "🌊 WavePay", "🏦 Bank Transfer"];
 
@@ -41,8 +40,13 @@ export default function WalletsPage() {
 
       if (data && !error) {
         let masterTotal = 0;
+        
         const balances = accountList.map(acc => {
-          const accTxs = data.filter(t => t.account === acc);
+          // Find transactions for this account (AND catch old null transactions in the first wallet, usually Cash)
+          const accTxs = data.filter(t => 
+             t.account === acc || (accountList.indexOf(acc) === 0 && !accountList.includes(t.account || ""))
+          );
+          
           const accBalance = accTxs.reduce((sum, tx) => {
             return tx.type === 'income' ? sum + Number(tx.amount) : sum - Number(tx.amount);
           }, 0);

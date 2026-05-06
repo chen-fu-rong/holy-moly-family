@@ -55,6 +55,7 @@ export default function Dashboard() {
       }
 
       // 2. Fetch Loans
+      // 2. Fetch Loans
       const { data: loanData, error: loanError } = await supabase
         .from('loans')
         .select('*')
@@ -63,9 +64,14 @@ export default function Dashboard() {
 
       if (loanError) throw loanError;
       if (loanData) {
-        setTotalOutstanding(loanData.reduce((acc, curr) => acc + Number(curr.principal_amount), 0));
+        // Calculate strictly what YOU OWE (borrowed)
+        const totalBorrowed = loanData
+          .filter(l => l.type === 'borrowed')
+          .reduce((acc, curr) => acc + Number(curr.principal_amount), 0);
+        
+        setTotalOutstanding(totalBorrowed); // Rename state or just pass this number
       }
-    } catch (error) {
+     } catch (error) {
       console.error("Error fetching vault data:", error);
     } finally {
       setIsSyncing(false);
