@@ -80,7 +80,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="relative min-h-[100dvh] h-[100dvh] overflow-y-auto overscroll-y-none pb-[calc(env(safe-area-inset-bottom)+8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] [&::-webkit-scrollbar]:hidden [-webkit-tap-highlight-color:transparent]">
+    <div className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] [-webkit-tap-highlight-color:transparent]">
       {/* 2026 Aurora Ambient Background */}
       <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none">
         <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full bg-indigo-500/20 dark:bg-indigo-600/20 blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />

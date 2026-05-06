@@ -30,26 +30,21 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     // 1. Check if device is already paired to a vault
     const savedFamilyId = localStorage.getItem("family_id");
     const savedName = localStorage.getItem("my_name");
+    const unlockedUntil = localStorage.getItem("vault_unlocked_until");
     
     if (savedName) setUserName(savedName);
 
     if (savedFamilyId) {
       setFamilyId(savedFamilyId);
-      setAppState("locked");
+      
+      // NEW: Check if the 7-day session is still valid
+      if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
+        setAppState("unlocked"); // Skip PIN!
+      } else {
+        setAppState("locked"); // Session expired, ask for PIN
+      }
     } else {
       setAppState("unpaired");
-    }
-
-    // Lockout logic setup
-    const attempts = parseInt(localStorage.getItem("pin_failed_attempts") || "0");
-    const lockout = parseInt(localStorage.getItem("pin_lockout_time") || "0");
-    setFailedAttempts(attempts);
-
-    if (lockout > Date.now()) {
-      setLockoutTime(lockout);
-    } else if (lockout !== 0) {
-      localStorage.removeItem("pin_failed_attempts");
-      localStorage.removeItem("pin_lockout_time");
     }
   }, []);
 
@@ -140,7 +135,6 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     if (lockoutTime) return;
     setIsLoading(true);
 
-    // Verify PIN against Supabase vault
     const { data, error } = await supabase
       .from('families')
       .select('id')
@@ -154,19 +148,24 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       localStorage.removeItem("pin_failed_attempts");
       setFailedAttempts(0);
       setPinInput("");
+      
+      // NEW: Keep unlocked for 7 days (7 * 24 * 60 * 60 * 1000 milliseconds)
+      localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
+      
       setAppState("unlocked");
     } else {
-      const newAttempts = failedAttempts + 1;
-      setFailedAttempts(newAttempts);
-      localStorage.setItem("pin_failed_attempts", newAttempts.toString());
-      if (newAttempts >= 3) {
-        const unlockTime = Date.now() + 24 * 60 * 60 * 1000;
-        setLockoutTime(unlockTime);
-        localStorage.setItem("pin_lockout_time", unlockTime.toString());
-      } else {
-        alert(`Incorrect PIN! You have ${3 - newAttempts} attempts left.`);
+      // Incorrect PIN - increment failed attempts
+      const newFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(newFailedAttempts);
+
+      if (newFailedAttempts >= 3) {
+        // Lock for 1 hour
+        const lockUntil = Date.now() + 3600000;
+        setLockoutTime(lockUntil);
+        localStorage.setItem("pin_lockout_time", lockUntil.toString());
       }
-      setPinInput("");
+
+      localStorage.setItem("pin_failed_attempts", newFailedAttempts.toString());
     }
   };
 

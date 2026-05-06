@@ -57,6 +57,9 @@ export default function SettingsPage() {
     
     // 1. Save wallets locally
     localStorage.setItem("custom_accounts", JSON.stringify(wallets));
+    
+    // NEW: Broadcast an event to the rest of the app to sync instantly!
+    window.dispatchEvent(new Event("settings-updated"));
 
     // 2. Save categories to Supabase Vault
     if (familyId) {
