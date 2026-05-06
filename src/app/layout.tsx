@@ -16,12 +16,14 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#4f46e5",
-  width: "device-width",
+
+
+export const viewport = {
+  width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, // Prevents annoying zooming when tapping buttons on iPhone
+  userScalable: false, // Prevents annoying zoom-ins when double-tapping
+  viewportFit: 'cover', // This forces the app behind the Dynamic Island
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode; }) {
