@@ -1,8 +1,8 @@
 "use client";
 
 import Providers from './Providers';
-import TopBar from './TopBar';
 import BottomNav from './BottomNav';
+import AddModal from './AddModal';
 import { useEffect, useState } from 'react';
 import { Lock, AlertTriangle, Shield, Key, Users, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -26,6 +26,9 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
   const [lockoutTime, setLockoutTime] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>("");
 
+  // Global Modal State for the floating '+' button
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   useEffect(() => {
     // 1. Check if device is already paired to a vault
     const savedFamilyId = localStorage.getItem("family_id");
@@ -37,15 +40,20 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     if (savedFamilyId) {
       setFamilyId(savedFamilyId);
       
-      // NEW: Check if the 7-day session is still valid
+      // Check if the 7-day session is still valid
       if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
-        setAppState("unlocked"); // Skip PIN!
+        setAppState("unlocked");
       } else {
-        setAppState("locked"); // Session expired, ask for PIN
+        setAppState("locked");
       }
     } else {
       setAppState("unpaired");
     }
+
+    // 2. Setup Global Add Modal Listener
+    const handleOpenModal = () => setIsModalOpen(true);
+    window.addEventListener("open-add-modal", handleOpenModal);
+    return () => window.removeEventListener("open-add-modal", handleOpenModal);
   }, []);
 
   // Handle Lockout Timer
@@ -93,10 +101,10 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       return;
     }
 
-    // Save to local storage
     localStorage.setItem("family_id", data.id);
     localStorage.setItem("my_name", userName.trim());
     localStorage.setItem("my_setup_complete", "true");
+    localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
     
     setFamilyId(data.id);
     setGeneratedCode(code);
@@ -107,7 +115,6 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     if (!userName.trim() || !pairingCodeInput || !pinInput) return alert("Fill in all fields.");
     setIsLoading(true);
 
-    // Find the vault by pairing code AND verify PIN instantly
     const { data, error } = await supabase
       .from('families')
       .select('*')
@@ -122,13 +129,13 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       return;
     }
 
-    // Success! Link device
     localStorage.setItem("family_id", data.id);
     localStorage.setItem("my_name", userName.trim());
     localStorage.setItem("my_setup_complete", "true");
+    localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
     
     setFamilyId(data.id);
-    setAppState("unlocked"); // Skip lock screen since they just entered the PIN
+    setAppState("unlocked");
   };
 
   const handleUnlock = async () => {
@@ -148,18 +155,13 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       localStorage.removeItem("pin_failed_attempts");
       setFailedAttempts(0);
       setPinInput("");
-      
-      // NEW: Keep unlocked for 7 days (7 * 24 * 60 * 60 * 1000 milliseconds)
       localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
-      
       setAppState("unlocked");
     } else {
-      // Incorrect PIN - increment failed attempts
       const newFailedAttempts = failedAttempts + 1;
       setFailedAttempts(newFailedAttempts);
 
       if (newFailedAttempts >= 3) {
-        // Lock for 1 hour
         const lockUntil = Date.now() + 3600000;
         setLockoutTime(lockUntil);
         localStorage.setItem("pin_lockout_time", lockUntil.toString());
@@ -169,21 +171,38 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     }
   };
 
-  if (appState === "loading") return <div className="min-h-screen bg-gray-900 flex justify-center items-center"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>;
+  // UI: Loading
+  if (appState === "loading") {
+    return <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950 flex justify-center items-center"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>;
+  }
 
+  // Helper for Auth Screen Backgrounds
+  const AuthBackground = () => (
+    <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu">
+      <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
+      <div className="absolute top-[20%] -right-[10%] w-[50%] h-[60%] rounded-full bg-fuchsia-400/20 dark:bg-fuchsia-500/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+    </div>
+  );
+
+  // UI: Setup Required
   if (appState === "unpaired") {
     return (
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-8 shadow-2xl">
-          <div className="flex justify-center mb-6"><Shield size={48} className="text-indigo-600" /></div>
-          <h1 className="text-3xl font-bold mb-2 text-center text-gray-900 dark:text-white">Family Vault</h1>
-          <p className="text-gray-500 text-center text-sm mb-8">Secure your family's financial data. Create a new vault or connect to your partner's.</p>
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
+        <AuthBackground />
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl w-full max-w-md rounded-[2rem] p-8 shadow-2xl border border-white/50 dark:border-gray-800 animate-in zoom-in-95 duration-500">
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-fuchsia-500 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Shield size={36} className="text-white" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-extrabold mb-2 text-center text-gray-900 dark:text-white">Family Vault</h1>
+          <p className="text-gray-500 text-center text-sm mb-8 font-medium">Secure your financial data. Create a new vault or connect to a partner.</p>
           
           <div className="space-y-4">
-            <button onClick={() => setAppState("create_vault")} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all">
+            <button onClick={() => setAppState("create_vault")} className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:scale-[1.02] active:scale-95 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all transform-gpu shadow-md">
               <Key size={20} /> Create New Vault
             </button>
-            <button onClick={() => setAppState("join_vault")} className="w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all">
+            <button onClick={() => setAppState("join_vault")} className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 text-gray-900 dark:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all transform-gpu shadow-sm">
               <Users size={20} /> Join Existing Vault
             </button>
           </div>
@@ -192,36 +211,40 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     );
   }
 
+  // UI: Create Vault
   if (appState === "create_vault") {
     return (
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-8 shadow-2xl">
-          <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Create Vault</h1>
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
+        <AuthBackground />
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl w-full max-w-md rounded-[2rem] p-8 shadow-2xl border border-white/50 dark:border-gray-800 animate-in zoom-in-95 duration-300">
+          <h1 className="text-2xl font-extrabold mb-6 text-gray-900 dark:text-white">Create Vault</h1>
           <div className="space-y-4 mb-8">
-            <input type="text" placeholder="Your Name (e.g. Aung)" value={userName} onChange={(e) => setUserName(e.target.value)} className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
-            <input type="text" placeholder="Vault Name" value={vaultName} onChange={(e) => setVaultName(e.target.value)} className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
-            <input type="password" placeholder="Set Master PIN (4+ digits)" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" placeholder="Your Name" value={userName} onChange={(e) => setUserName(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            <input type="text" placeholder="Vault Name" value={vaultName} onChange={(e) => setVaultName(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            <input type="password" placeholder="Set Master PIN (4+ digits)" inputMode="numeric" pattern="[0-9]*" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
-          <button onClick={handleCreateVault} disabled={isLoading} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2">
+          <button onClick={handleCreateVault} disabled={isLoading} className="w-full bg-indigo-600 active:scale-95 text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-2 transition-transform transform-gpu shadow-md">
             {isLoading ? <Loader2 className="animate-spin" /> : "Create & Generate Code"}
           </button>
-          <button onClick={() => setAppState("unpaired")} className="w-full mt-4 text-gray-500 text-sm font-bold py-2">Back</button>
+          <button onClick={() => setAppState("unpaired")} className="w-full mt-4 text-gray-500 hover:text-gray-900 dark:hover:text-white text-sm font-bold py-2 transition-colors">Go Back</button>
         </div>
       </div>
     );
   }
 
+  // UI: Show Generated Code
   if (appState === "show_code") {
     return (
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
-          <CheckCircle size={48} className="text-emerald-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Vault Created!</h1>
-          <p className="text-gray-500 mb-6">Share this exact code with your partner so they can link their device.</p>
-          <div className="bg-gray-100 dark:bg-gray-900 py-6 rounded-2xl mb-8 border-2 border-dashed border-gray-300 dark:border-gray-700">
-            <p className="text-4xl font-mono font-bold text-indigo-600 tracking-[0.2em]">{generatedCode}</p>
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
+        <AuthBackground />
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl w-full max-w-md rounded-[2rem] p-8 shadow-2xl border border-white/50 dark:border-gray-800 animate-in zoom-in-95 duration-300 text-center">
+          <CheckCircle size={56} className="text-emerald-500 mx-auto mb-6 drop-shadow-md" />
+          <h1 className="text-2xl font-extrabold mb-2 text-gray-900 dark:text-white">Vault Created!</h1>
+          <p className="text-gray-500 mb-6 font-medium text-sm">Share this exact code with your partner to link their device.</p>
+          <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm py-6 rounded-2xl mb-8 border border-dashed border-gray-300 dark:border-gray-600">
+            <p className="text-4xl font-mono font-black text-indigo-600 tracking-[0.2em]">{generatedCode}</p>
           </div>
-          <button onClick={() => setAppState("unlocked")} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2">
+          <button onClick={() => setAppState("unlocked")} className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 active:scale-95 text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-2 transition-transform transform-gpu shadow-md">
             Enter App <ArrowRight size={20} />
           </button>
         </div>
@@ -229,57 +252,63 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     );
   }
 
+  // UI: Join Vault
   if (appState === "join_vault") {
     return (
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-8 shadow-2xl">
-          <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Join Vault</h1>
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
+        <AuthBackground />
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl w-full max-w-md rounded-[2rem] p-8 shadow-2xl border border-white/50 dark:border-gray-800 animate-in zoom-in-95 duration-300">
+          <h1 className="text-2xl font-extrabold mb-6 text-gray-900 dark:text-white">Join Vault</h1>
           <div className="space-y-4 mb-8">
-            <input type="text" placeholder="Your Name (e.g. Paing)" value={userName} onChange={(e) => setUserName(e.target.value)} className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
-            <input type="text" placeholder="6-Character Pairing Code" value={pairingCodeInput} onChange={(e) => setPairingCodeInput(e.target.value)} className="w-full uppercase p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white font-mono tracking-widest outline-none focus:ring-2 focus:ring-indigo-500" />
-            <input type="password" placeholder="Master Vault PIN" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" placeholder="Your Name" value={userName} onChange={(e) => setUserName(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            <input type="text" placeholder="6-Character Pairing Code" value={pairingCodeInput} onChange={(e) => setPairingCodeInput(e.target.value)} className="w-full uppercase p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 dark:text-white font-mono tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            <input type="password" placeholder="Master Vault PIN" inputMode="numeric" pattern="[0-9]*" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
-          <button onClick={handleJoinVault} disabled={isLoading} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2">
+          <button onClick={handleJoinVault} disabled={isLoading} className="w-full bg-indigo-600 active:scale-95 text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-2 transition-transform transform-gpu shadow-md">
             {isLoading ? <Loader2 className="animate-spin" /> : "Link Device"}
           </button>
-          <button onClick={() => setAppState("unpaired")} className="w-full mt-4 text-gray-500 text-sm font-bold py-2">Back</button>
+          <button onClick={() => setAppState("unpaired")} className="w-full mt-4 text-gray-500 hover:text-gray-900 dark:hover:text-white text-sm font-bold py-2 transition-colors">Go Back</button>
         </div>
       </div>
     );
   }
 
+  // UI: PIN Locked
   if (appState === "locked") {
     return (
-      <div className="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4 z-50">
-        <div className="bg-gray-800 w-full max-w-sm rounded-3xl p-8 shadow-2xl flex flex-col items-center">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4">
+        <AuthBackground />
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl w-full max-w-sm rounded-[2rem] p-8 shadow-2xl border border-white/50 dark:border-gray-800 animate-in zoom-in-95 duration-300 flex flex-col items-center">
           {lockoutTime ? (
             <>
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
-                <AlertTriangle size={32} className="text-red-500" />
+              <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-6">
+                <AlertTriangle size={36} className="text-rose-500" />
               </div>
-              <h1 className="text-2xl font-bold mb-2 text-red-500">Vault Locked</h1>
-              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl w-full text-center mt-4">
-                <p className="text-xs text-red-400 font-bold uppercase mb-1">Try again in</p>
-                <p className="text-2xl font-mono font-bold text-red-500">{timeLeft}</p>
+              <h1 className="text-2xl font-extrabold mb-2 text-rose-500">Vault Locked</h1>
+              <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 p-4 rounded-2xl w-full text-center mt-4">
+                <p className="text-xs text-rose-500 font-bold uppercase mb-1">Try again in</p>
+                <p className="text-3xl font-mono font-black text-rose-600">{timeLeft}</p>
               </div>
             </>
           ) : (
             <>
-              <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30">
-                <Lock size={32} />
+              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-fuchsia-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30">
+                <Lock size={36} className="text-white" />
               </div>
-              <h1 className="text-2xl font-bold mb-2">Vault Locked</h1>
-              <p className="text-gray-400 text-center text-sm mb-8">Welcome back, {userName}.</p>
+              <h1 className="text-2xl font-extrabold mb-2 text-gray-900 dark:text-white">Vault Locked</h1>
+              <p className="text-gray-500 text-center text-sm mb-8 font-medium">Welcome back, {userName}.</p>
               <input
                 type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="PIN"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-                className="w-full text-center text-2xl tracking-[0.5em] mb-4 p-4 rounded-xl border-none bg-gray-900 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full text-center text-3xl tracking-[0.5em] font-black mb-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
-              {failedAttempts > 0 && <p className="text-rose-500 text-xs mb-6 font-medium">{3 - failedAttempts} attempts remaining</p>}
-              <button onClick={handleUnlock} disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-colors flex justify-center items-center">
+              {failedAttempts > 0 && <p className="text-rose-500 text-xs mb-6 font-bold">{3 - failedAttempts} attempts remaining</p>}
+              <button onClick={handleUnlock} disabled={isLoading} className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 active:scale-95 text-white font-bold py-4 rounded-2xl transition-transform transform-gpu shadow-md flex justify-center items-center">
                 {isLoading ? <Loader2 className="animate-spin" /> : "Unlock"}
               </button>
             </>
@@ -289,18 +318,21 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     );
   }
 
-  // If unlocked, render the main app layout
+  // UNLOCKED STATE (The actual app)
   return (
     <Providers>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent]">
         <BottomNav />
-        <div className="flex-1 flex flex-col md:ml-24 min-w-0 min-h-screen bg-white dark:bg-gray-950">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
+        {/* TopBar completely removed to reclaim screen real estate */}
+        <div className="flex-1 flex flex-col md:ml-24 min-w-0 min-h-[100dvh] bg-transparent">
+          <main className="flex-1 w-full">
             {children}
           </main>
         </div>
       </div>
+      
+      {/* Global Add Modal handles all '+' button clicks */}
+      <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </Providers>
   );
 }
