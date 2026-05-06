@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { X, Briefcase, HomeIcon, ArrowUpCircle, ArrowDownCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-// Match these to the icons you set up in page.tsx
 const CATEGORIES = [
   "Food", "Transport", "Shopping", "Bills", 
   "Rent", "Health", "Entertainment", "Business", "Salary", "Baby Prep"
 ];
+
+const DEFAULT_ACCOUNTS = ["💵 Cash", "🔵 KBZPay", "🌊 WavePay", "🔴 KPay", "🛑 AYA Pay", "🏦 Bank Transfer"];
 
 interface AddModalProps {
   isOpen: boolean;
@@ -19,7 +20,9 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [isBusiness, setIsBusiness] = useState(false); // 🟢 The crucial new toggle
+  const [isBusiness, setIsBusiness] = useState(false);
+  const [account, setAccount] = useState("");
+  const [availableAccounts, setAvailableAccounts] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [myName, setMyName] = useState("Me");
@@ -28,7 +31,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
     setMyName(localStorage.getItem("my_name") || "Me");
   }, []);
 
-  // Reset form when opened
+  // Reset form and load custom wallets when opened
   useEffect(() => {
     if (isOpen) {
       setAmount("");
@@ -36,6 +39,16 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
       setType("expense");
       setIsBusiness(false);
       setNotes("");
+      
+      // Load the custom wallets from settings
+      const savedAccs = localStorage.getItem("custom_accounts");
+      const parsedAccs = savedAccs ? JSON.parse(savedAccs) : DEFAULT_ACCOUNTS;
+      setAvailableAccounts(parsedAccs);
+      
+      // Set the default selected account to the first one in the list
+      if (parsedAccs.length > 0) {
+        setAccount(parsedAccs[0]);
+      }
     }
   }, [isOpen]);
 
@@ -47,18 +60,16 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
 
     setIsLoading(true);
 
-    // 1. Prepare the payload matching our Supabase schema
     const payload = {
       amount: Number(amount),
       category: category,
       type: type,
-      is_business_overhead: isBusiness, // 🟢 Saves to the specific column
+      is_business_overhead: isBusiness,
       spender: myName,
-      account: isBusiness ? "Business Card" : "Joint Checking", // Auto-tags the account
+      account: account, // Now uses the wallet you actually selected
       notes: notes,
     };
 
-    // 2. Insert into Supabase
     const { error } = await supabase
       .from("transactions")
       .insert([payload]);
@@ -69,7 +80,6 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
       console.error("Error saving transaction:", error);
       alert("Failed to save. Check your connection.");
     } else {
-      // 3. Tell the main page to refresh its data
       window.dispatchEvent(new Event("transaction-updated"));
       onClose();
     }
@@ -98,7 +108,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
 
         <div className="p-5 space-y-6">
           
-          {/* 🟢 Context Toggle: Household vs Business */}
+          {/* Context Toggle: Household vs Business */}
           <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl">
             <button
               onClick={() => setIsBusiness(false)}
@@ -144,6 +154,28 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
                 placeholder="0"
                 className="w-full bg-gray-50 dark:bg-gray-800 text-2xl font-bold rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
+            </div>
+          </div>
+
+          {/* Wallet / Account Selector */}
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Wallet / Account</label>
+            <div className="relative">
+              <select
+                value={account}
+                onChange={(e) => setAccount(e.target.value)}
+                className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer"
+              >
+                {availableAccounts.map((acc) => (
+                  <option key={acc} value={acc}>
+                    {acc}
+                  </option>
+                ))}
+              </select>
+              {/* Custom arrow for the select box */}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
             </div>
           </div>
 
