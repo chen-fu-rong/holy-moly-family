@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@serwist/next": "^9.5.11",
+    "@serwist/precaching": "^9.5.11",
+    "@serwist/sw": "^9.5.11",
     "@supabase/supabase-js": "^2.99.1",
     "lucide-react": "^0.577.0",
     "next": "^16.2.4",
