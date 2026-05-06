@@ -1,26 +1,25 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, Wallet, Coffee, ShoppingCart, TrendingUp, Bus, Zap, Briefcase, Receipt, Edit2, RefreshCcw, HomeIcon, Activity, HeartPulse, Scale, User } from "lucide-react";
+import { Wallet, Coffee, ShoppingCart, Bus, Zap, Receipt, RefreshCcw, HomeIcon, Activity, HeartPulse, Scale, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase"; 
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
-import { Transaction, Loan } from "../types";
+import { Transaction } from "../types";
 
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [chartData, setChartData] = useState<Record<string, number | string>[]>([]);
+  const [chartData] = useState<Record<string, number | string>[]>([]);
   
   // Balances
-  const [cashBalance, setCashBalance] = useState(0); 
-  const [netWorth, setNetWorth] = useState(0); 
-  const [myBalance, setMyBalance] = useState(0);
-  const [partnerBalance, setPartnerBalance] = useState(0);
-  const [businessBalance, setBusinessBalance] = useState(0); 
+  const [cashBalance] = useState(0); 
+  const [netWorth] = useState(0); 
+  const [myBalance] = useState(0);
+  const [partnerBalance] = useState(0);
+  const [businessBalance] = useState(0); 
   
   // Person Data
   const [myName, setMyName] = useState("");
-  const [partnerName, setPartnerName] = useState("Partner");
+  const [partnerName] = useState("Partner");
   const [isSyncing, setIsSyncing] = useState(false);
   
   // Chart Toggle
@@ -38,112 +37,52 @@ export default function Home() {
       setIsSyncing(true);
     }
 
-    fetchData(name);
+    fetchData();
     
-    const handleUpdate = () => fetchData(name);
+    const handleUpdate = () => fetchData();
+    
     window.addEventListener("transaction-updated", handleUpdate);
     return () => window.removeEventListener("transaction-updated", handleUpdate);
   }, []);
 
-  const fetchData = async (currentName: string) => {
+  const fetchData = async () => {
     setIsSyncing(true);
-    const [txRes, loanRes] = await Promise.all([
-      supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("loans").select("*")
-    ]);
+    const familyId = localStorage.getItem("family_id");
+    const myName = localStorage.getItem("my_name") || "Me";
+    setMyName(myName);
 
-    if (!txRes.error && txRes.data) {
-      setTransactions(txRes.data);
-      localStorage.setItem("cached_transactions", JSON.stringify(txRes.data));
+    if (!familyId) return;
+
+    try {
+      // 1. Fetch ONLY transactions for this Family Vault
+      // 1. Fetch ONLY transactions for this Family Vault
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('family_id', familyId) 
+        .order('transaction_date', { ascending: false }) // <-- CHANGED THIS LINE
+        .limit(100);
+
+      if (txError) throw txError;
+      if (txData) {
+        setTransactions(txData);
+      }
+
+    } catch (error) {
+      console.error("Error fetching vault data:", error);
+    } finally {
+      setIsSyncing(false);
     }
-    if (!loanRes.error && loanRes.data) setLoans(loanRes.data);
-
-    calculateEverything(txRes.data || [], loanRes.data || [], currentName);
-    processChartData(txRes.data || [], currentName);
-    setIsSyncing(false);
   };
 
-  const calculateEverything = (txData: Transaction[], loanData: Loan[], currentName: string) => {
-    let cash = 0, mine = 0, partner = 0, businessPool = 0, pName = "Partner";
+  // Run on mount and listen for the custom event
+  useEffect(() => {
+    fetchData();
 
-    txData.forEach(tx => {
-      // Isolate business transactions completely
-      if (tx.is_business_overhead) {
-        businessPool += tx.amount;
-        return; 
-      }
-
-      // Standard Household Math
-      cash += tx.amount;
-      if (tx.spender === currentName) {
-        mine += tx.amount;
-      } else {
-        if (tx.spender && tx.spender !== "Unknown" && tx.spender !== "Shared") pName = tx.spender;
-        partner += tx.amount;
-      }
-    });
-
-    let netReceivable = 0; 
-    let netPayable = 0; 
-
-    loanData.forEach(loan => {
-      const start = new Date(loan.start_date);
-      const now = new Date();
-      let monthsPassed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-      if (now.getDate() < start.getDate()) monthsPassed -= 1;
-      if (monthsPassed < 0) monthsPassed = 0;
-
-      const totalValue = loan.principal_amount + (loan.principal_amount * (loan.interest_rate / 100) * monthsPassed);
-      
-      if (loan.type === "lent") netReceivable += totalValue;
-      else netPayable += totalValue;
-    });
-
-    setCashBalance(cash);
-    setBusinessBalance(businessPool);
-    setNetWorth(cash + netReceivable - netPayable); 
-    setMyBalance(mine);
-    setPartnerBalance(partner);
-    setPartnerName(pName);
-  };
-
-  const processChartData = (data: Transaction[], currentName: string) => {
-    const result: Record<string, any> = {};
-    
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const monthName = d.toLocaleString('en-US', { month: 'short' });
-      result[monthName] = { 
-        month: monthName, 
-        myIncome: 0, 
-        myExpense: 0, 
-        partnerIncome: 0, 
-        partnerExpense: 0 
-      };
-    }
-    
-    data.forEach(tx => {
-      // Ignore business overhead from the household burn rate charts
-      if (tx.is_business_overhead) return;
-
-      const d = new Date(tx.created_at);
-      const monthName = d.toLocaleString('en-US', { month: 'short' });
-      
-      if (result[monthName]) {
-        const isMine = tx.spender === currentName;
-        if (tx.type === 'income') {
-          if (isMine) result[monthName].myIncome += tx.amount;
-          else result[monthName].partnerIncome += tx.amount;
-        } else {
-          if (isMine) result[monthName].myExpense += Math.abs(tx.amount);
-          else result[monthName].partnerExpense += Math.abs(tx.amount);
-        }
-      }
-    });
-    
-    setChartData(Object.values(result));
-  };
+    const handleUpdate = () => fetchData();
+    window.addEventListener("transaction-updated", handleUpdate);
+    return () => window.removeEventListener("transaction-updated", handleUpdate);
+  }, []);
 
   const handleEditClick = (tx: Transaction) => window.dispatchEvent(new CustomEvent("open-edit-modal", { detail: tx }));
 
@@ -170,9 +109,9 @@ export default function Home() {
       <div className="flex justify-between items-center">
         <div>
           <p className="text-gray-500 text-sm font-medium">Welcome back,</p>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{myName}'s Dashboard</h2>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{myName}&apos;s Dashboard</h2>
         </div>
-        <div onClick={() => fetchData(myName)} className={`w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold cursor-pointer shadow-sm ${isSyncing ? "animate-pulse" : ""}`}>
+        <div onClick={() => fetchData()} className={`w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold cursor-pointer shadow-sm ${isSyncing ? "animate-pulse" : ""}`}>
           {isSyncing ? <RefreshCcw size={20} className="animate-spin" /> : myName.charAt(0).toUpperCase()}
         </div>
       </div>
