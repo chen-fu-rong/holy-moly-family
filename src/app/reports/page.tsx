@@ -4,15 +4,15 @@ import { Loader2, Scale, PieChart as PieIcon, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { supabase } from "../../lib/supabase";
+import { Transaction } from "../../types";
 
 const COLORS = ["#6366f1", "#ec4899", "#f59e0b", "#10b981", "#8b5cf6", "#f43f5e", "#0ea5e9"];
 
 export default function ReportsPage() {
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [compareData, setCompareData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<Record<string, number | string>[]>([]);
+  const [compareData, setCompareData] = useState<Record<string, number | string>[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCompareMode, setIsCompareMode] = useState(false); // Compare Toggle
-  
   const [myName, setMyName] = useState("Me");
   const [partnerName, setPartnerName] = useState("Partner");
 
@@ -24,9 +24,8 @@ export default function ReportsPage() {
 
   const fetchExpenses = async (currentName: string) => {
     setLoading(true);
-    // Expense (ထွက်ငွေ) သီးသန့်ဆွဲမည်
+    // Expense
     const { data, error } = await supabase.from("transactions").select("amount, category, spender").eq("type", "expense");
-
     if (!error && data) {
       let detectedPartner = "Partner";
       const groupedPie: any = {};
@@ -37,15 +36,15 @@ export default function ReportsPage() {
         const amount = Math.abs(tx.amount);
         let spender = tx.spender || "Unknown";
         
-        // Partner Name ရှာဖွေခြင်း
+        // Partner Name
         if (spender !== currentName && spender !== "Unknown" && spender !== "Shared") {
           detectedPartner = spender;
         }
 
-        // 1. Pie Chart အတွက် စုစုပေါင်းပေါင်းခြင်း (Total Expenses by Category)
+        // 1. Pie Chart (Total Expenses by Category)
         groupedPie[category] = (groupedPie[category] || 0) + amount;
 
-        // 2. Bar Chart အတွက် လူအလိုက် ခွဲပေါင်းခြင်း (Compare Mode)
+        // 2. Bar Chart (Compare Mode)
         if (!groupedCompare[category]) {
           groupedCompare[category] = { category: category, [currentName]: 0, Partner: 0 };
         }
@@ -64,6 +63,7 @@ export default function ReportsPage() {
         name: key,
         value: groupedPie[key],
       })).sort((a, b) => b.value - a.value);
+      
       setChartData(formattedPie);
 
       // Compare Data Format (Replace "Partner" with actual detected name)
@@ -71,12 +71,13 @@ export default function ReportsPage() {
         const newItem = { category: item.category, [currentName]: item[currentName], [detectedPartner]: item["Partner"] };
         return newItem;
       });
+      
       setCompareData(formattedCompare);
     }
     setLoading(false);
   };
 
-  const CustomPieTooltip = ({ active, payload }: any) => {
+  const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700">
@@ -97,7 +98,7 @@ export default function ReportsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Expense Reports</h2>
         </div>
         
-        {/* 🟢 Compare Toggle Button */}
+        {/* Compare Toggle Button */}
         <button 
           onClick={() => setIsCompareMode(!isCompareMode)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold shadow-sm transition-colors ${isCompareMode ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-indigo-600 border border-indigo-100 dark:border-gray-700'}`}
@@ -119,7 +120,7 @@ export default function ReportsPage() {
         ) : (
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full">
             
-            {/* 🟢 ဇယားများ ပြသမည့်အပိုင်း */}
+            {/* Chart */}
             <div className="w-full md:w-2/3 h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
                 {!isCompareMode ? (
@@ -147,7 +148,7 @@ export default function ReportsPage() {
               </ResponsiveContainer>
             </div>
 
-            {/* List Details (Overall View အတွက်သာ ပြမည်) */}
+            {/* List Details (Overall View) */}
             {!isCompareMode && (
               <div className="w-full md:w-1/3 space-y-3 max-h-[350px] overflow-y-auto pr-2">
                 {chartData.map((item, index) => (
@@ -156,7 +157,7 @@ export default function ReportsPage() {
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                       <p className="font-semibold text-sm truncate max-w-[120px]">{item.name}</p>
                     </div>
-                    <p className="font-bold text-sm">{item.value.toLocaleString()}</p>
+                    <p className="font-bold text-sm">{(item.value as number).toLocaleString()}</p>
                   </div>
                 ))}
               </div>

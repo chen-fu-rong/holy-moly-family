@@ -1,12 +1,24 @@
+// src/components/Providers.tsx
 "use client";
 
-import { ThemeProvider } from "next-themes";
-import { ReactNode } from "react";
+import { useState, useEffect } from "react";
+import AddModal from "./AddModal";
 
-export default function Providers({ children }: { children: ReactNode }) {
+export default function Providers({ children }: { children: React.ReactNode }) {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Listen for the custom event sent by the BottomNav
+    const handleOpen = () => setIsAddModalOpen(true);
+    window.addEventListener("open-add-modal", handleOpen);
+    
+    return () => window.removeEventListener("open-add-modal", handleOpen);
+  }, []);
+
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <>
       {children}
-    </ThemeProvider>
+      <AddModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+    </>
   );
 }

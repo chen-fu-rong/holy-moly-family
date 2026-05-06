@@ -3,9 +3,10 @@
 import { HandCoins, Loader2, Plus, Trash2, TrendingUp, Calendar, Percent, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { Loan } from "../../types";
 
 export default function LoansPage() {
-  const [loans, setLoans] = useState<any[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -33,7 +34,6 @@ export default function LoansPage() {
     let monthsPassed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
     if (now.getDate() < start.getDate()) monthsPassed -= 1;
     if (monthsPassed < 0) monthsPassed = 0;
-
     const totalInterest = principalAmt * (ratePct / 100) * monthsPassed;
     return { monthsPassed, totalInterest, currentTotal: principalAmt + totalInterest };
   };
@@ -67,9 +67,8 @@ export default function LoansPage() {
     fetchLoans();
   };
 
-  // 🟢 ရစရာရှိတာနဲ့ ပေးစရာရှိတာ ခွဲပေါင်းမည်
-  let totalReceivable = 0; // ငါရမှာ (Lent)
-  let totalPayable = 0; // ငါပေးရမှာ (Debt)
+  let totalReceivable = 0; 
+  let totalPayable = 0; 
 
   loans.forEach(loan => {
     const { currentTotal } = calculateLoanDetails(loan.principal_amount, loan.interest_rate, loan.start_date);
@@ -89,11 +88,11 @@ export default function LoansPage() {
         
         <div className="flex gap-4 w-full lg:w-auto">
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 p-4 rounded-2xl flex-1">
-            <p className="text-emerald-600 text-xs font-bold uppercase mb-1">Total Receivable (ရစရာ)</p>
+            <p className="text-emerald-600 text-xs font-bold uppercase mb-1">Total Receivable</p>
             <h3 className="text-xl font-extrabold text-emerald-700">{totalReceivable.toLocaleString()} Ks</h3>
           </div>
           <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 p-4 rounded-2xl flex-1">
-            <p className="text-rose-600 text-xs font-bold uppercase mb-1">Total Payable (ပေးစရာ)</p>
+            <p className="text-rose-600 text-xs font-bold uppercase mb-1">Total Payable</p>
             <h3 className="text-xl font-extrabold text-rose-700">{totalPayable.toLocaleString()} Ks</h3>
           </div>
         </div>
@@ -109,17 +108,17 @@ export default function LoansPage() {
           <h3 className="font-bold text-lg mb-4">Record New Entry</h3>
           
           <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-4">
-            <button onClick={() => setLoanType("lent")} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${loanType === "lent" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500"}`}>I Lent Money (ရစရာ)</button>
-            <button onClick={() => setLoanType("borrowed")} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${loanType === "borrowed" ? "bg-white text-rose-600 shadow-sm" : "text-gray-500"}`}>I Borrowed (ပေးစရာကြွေး)</button>
+            <button onClick={() => setLoanType("lent")} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${loanType === "lent" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500"}`}>I Lent Money</button>
+            <button onClick={() => setLoanType("borrowed")} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${loanType === "borrowed" ? "bg-white text-rose-600 shadow-sm" : "text-gray-500"}`}>I Borrowed</button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">{loanType === 'lent' ? 'Borrower Name' : 'Lender Name'} (အမည်)</label>
+              <label className="block text-xs font-bold text-gray-500 mb-1">{loanType === 'lent' ? 'Borrower Name' : 'Lender Name'}</label>
               <input type="text" value={borrower} onChange={e=>setBorrower(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 dark:bg-gray-950 outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Principal Amount (အရင်းငွေ Ks)</label>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Principal Amount (Ks)</label>
               <input type="number" value={principal} onChange={e=>setPrincipal(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 dark:bg-gray-950 outline-none" />
             </div>
             <div>
@@ -131,6 +130,7 @@ export default function LoansPage() {
               <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 dark:bg-gray-950 outline-none" />
             </div>
           </div>
+
           <div className="flex gap-3 pt-4">
             <button onClick={handleSaveLoan} className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700">Save</button>
             <button onClick={() => setIsAdding(false)} className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl">Cancel</button>
@@ -159,9 +159,8 @@ export default function LoansPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
-                 {/* ... အရင်အတိုင်း အရင်းနဲ့ အတိုးနှုန်းပြသော အပိုင်း ... */}
-                 <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl">
-                    <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Principal (အရင်း)</p>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl">
+                    <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Principal</p>
                     <p className="font-semibold">{loan.principal_amount.toLocaleString()} <span className="text-xs">Ks</span></p>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl">
@@ -172,7 +171,7 @@ export default function LoansPage() {
 
               <div className={`p-5 rounded-2xl text-white ${isDebt ? 'bg-gradient-to-r from-rose-500 to-red-600' : 'bg-gradient-to-r from-emerald-500 to-teal-600'}`}>
                 <div className="flex justify-between items-end mb-2">
-                  <p className="text-sm font-medium opacity-90">{isDebt ? 'Current Debt (ပေးရန်)' : 'Current Value (ရရန်)'}</p>
+                  <p className="text-sm font-medium opacity-90">{isDebt ? 'Current Debt' : 'Current Value'}</p>
                   <p className="text-xs bg-black/20 px-2 py-1 rounded-md flex items-center gap-1">
                     <TrendingUp size={12}/> +{monthsPassed} Months
                   </p>

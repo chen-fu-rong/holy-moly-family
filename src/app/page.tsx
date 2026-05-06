@@ -4,25 +4,27 @@ import { ArrowDownRight, ArrowUpRight, Wallet, Coffee, ShoppingCart, TrendingUp,
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase"; 
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
+import { Transaction, Loan } from "../types";
 
 export default function Home() {
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loans, setLoans] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [chartData, setChartData] = useState<Record<string, number | string>[]>([]);
   
   // Balances
   const [cashBalance, setCashBalance] = useState(0); 
   const [netWorth, setNetWorth] = useState(0); 
   const [myBalance, setMyBalance] = useState(0);
   const [partnerBalance, setPartnerBalance] = useState(0);
+  const [businessBalance, setBusinessBalance] = useState(0); 
   
   // Person Data
   const [myName, setMyName] = useState("");
   const [partnerName, setPartnerName] = useState("Partner");
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Chart Data & Toggle
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [isCompareOverview, setIsCompareOverview] = useState(false); // 🟢 Overview Card အတွက် Compare Toggle
+  // Chart Toggle
+  const [isCompareOverview, setIsCompareOverview] = useState(false);
 
   useEffect(() => {
     const name = localStorage.getItem("my_name") || "Me";
@@ -32,7 +34,6 @@ export default function Home() {
     if (cachedData) {
       const parsedData = JSON.parse(cachedData);
       setTransactions(parsedData);
-      // Loans data is not cached in this example for simplicity, so we will fetch
     } else {
       setIsSyncing(true);
     }
@@ -47,7 +48,7 @@ export default function Home() {
   const fetchData = async (currentName: string) => {
     setIsSyncing(true);
     const [txRes, loanRes] = await Promise.all([
-      supabase.from("transactions").select("*").order("created_at", { ascending: false }),
+      supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("loans").select("*")
     ]);
 
@@ -62,10 +63,17 @@ export default function Home() {
     setIsSyncing(false);
   };
 
-  const calculateEverything = (txData: any[], loanData: any[], currentName: string) => {
-    let cash = 0, mine = 0, partner = 0, pName = "Partner";
+  const calculateEverything = (txData: Transaction[], loanData: Loan[], currentName: string) => {
+    let cash = 0, mine = 0, partner = 0, businessPool = 0, pName = "Partner";
 
     txData.forEach(tx => {
+      // Isolate business transactions completely
+      if (tx.is_business_overhead) {
+        businessPool += tx.amount;
+        return; 
+      }
+
+      // Standard Household Math
       cash += tx.amount;
       if (tx.spender === currentName) {
         mine += tx.amount;
@@ -92,18 +100,16 @@ export default function Home() {
     });
 
     setCashBalance(cash);
-    // Net Worth = Cash Balance + ရစရာ(အတိုးပါပြီး) - ပေးစရာ(အတိုးပါပြီး)
+    setBusinessBalance(businessPool);
     setNetWorth(cash + netReceivable - netPayable); 
     setMyBalance(mine);
     setPartnerBalance(partner);
     setPartnerName(pName);
   };
 
-  // 🟢 Overview ဇယားအတွက် လအလိုက် Data တွက်ချက်ခြင်း
-  const processChartData = (data: any[], currentName: string) => {
+  const processChartData = (data: Transaction[], currentName: string) => {
     const result: Record<string, any> = {};
     
-    // ပြီးခဲ့သော ၆ လစာ Array ကြိုဆောက်ထားမည်
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
@@ -118,6 +124,9 @@ export default function Home() {
     }
     
     data.forEach(tx => {
+      // Ignore business overhead from the household burn rate charts
+      if (tx.is_business_overhead) return;
+
       const d = new Date(tx.created_at);
       const monthName = d.toLocaleString('en-US', { month: 'short' });
       
@@ -136,7 +145,7 @@ export default function Home() {
     setChartData(Object.values(result));
   };
 
-  const handleEditClick = (tx: any) => window.dispatchEvent(new CustomEvent("open-edit-modal", { detail: tx }));
+  const handleEditClick = (tx: Transaction) => window.dispatchEvent(new CustomEvent("open-edit-modal", { detail: tx }));
 
   const getIcon = (category: string) => {
     if (category.includes("Food")) return Coffee;
@@ -170,7 +179,7 @@ export default function Home() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         
-        {/* 🟢 Main Balance Card (Original Clean View) */}
+        {/* Main Balance Card */}
         <div className="xl:col-span-1 w-full flex flex-col gap-4">
           <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden h-full flex flex-col justify-between min-h-[220px]">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
@@ -196,10 +205,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🟢 Monthly Overview Card (ဖုန်းမှာပါ ပေါ်အောင် ပြင်ထားပြီး Compare ခလုတ်ပါသည်) */}
+        {/* Monthly Overview Card */}
         <div className="xl:col-span-2 bg-white dark:bg-gray-900/40 rounded-3xl p-5 md:p-6 border border-gray-100 dark:border-gray-800 shadow-sm w-full">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg md:text-xl font-bold">Monthly Overview</h3>
+            <h3 className="text-lg md:text-xl font-bold">Household Burn Rate</h3>
             
             <button 
               onClick={() => setIsCompareOverview(!isCompareOverview)}
@@ -218,7 +227,6 @@ export default function Home() {
                 <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                 <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
                 
-                {/* Toggle on/off graphs based on mode */}
                 {!isCompareOverview ? (
                   <>
                     <Bar dataKey="myIncome" name={`${myName}'s Income`} fill="#10b981" radius={[4, 4, 0, 0]} />
@@ -239,7 +247,10 @@ export default function Home() {
         <div className="xl:col-span-3 bg-white dark:bg-gray-900/40 rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm w-full">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold">Recent Transactions</h3>
-            <p className="text-sm font-bold text-gray-500">Cash Flow: <span className="text-gray-900 dark:text-white">{cashBalance.toLocaleString()} Ks</span></p>
+            <div className="text-right">
+              <p className="text-sm font-bold text-gray-500">Household Cash: <span className="text-gray-900 dark:text-white">{cashBalance.toLocaleString()} Ks</span></p>
+              <p className="text-xs font-semibold text-indigo-500 mt-1">Business Cash: {businessBalance.toLocaleString()} Ks</p>
+            </div>
           </div>
           
           <div className="space-y-3 overflow-y-auto pr-2 max-h-[400px]">
@@ -257,7 +268,12 @@ export default function Home() {
                         <Icon size={18} strokeWidth={2.5} />
                       </div>
                       <div>
-                        <p className="font-bold text-sm">{tx.category}</p>
+                        <p className="font-bold text-sm flex items-center gap-2">
+                          {tx.category}
+                          {tx.is_business_overhead && (
+                            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">Business</span>
+                          )}
+                        </p>
                         <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                           {tx.account} • {formatDate(tx.created_at)} • 
                           <span className={`${isMine ? 'text-indigo-600' : 'text-fuchsia-600'} font-semibold`}>{tx.spender}</span>
