@@ -111,6 +111,8 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     }
 
     localStorage.setItem("family_id", data.id);
+    // Add this line inside handleCreateVault:
+    localStorage.setItem("is_vault_owner", "true");
     localStorage.setItem("my_name", userName.trim());
     localStorage.setItem("my_setup_complete", "true");
     localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());

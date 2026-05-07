@@ -6,6 +6,13 @@ import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, H
 import Link from "next/link";
 
 export default function Dashboard() {
+  const [isOwner, setIsOwner] = useState(false);
+
+useEffect(() => {
+  if (localStorage.getItem("is_vault_owner") === "true") {
+    setIsOwner(true);
+  }
+}, []);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(true);
   const [myName, setMyName] = useState("Me");
@@ -132,25 +139,30 @@ export default function Dashboard() {
       <div className="px-4 md:px-8 max-w-4xl mx-auto pt-2 space-y-6">
         
         {/* Header & Workspace Toggle */}
+        {/* Header & Workspace Toggle */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex bg-gray-200/50 dark:bg-gray-800/50 p-1 rounded-2xl w-48 shadow-inner">
-            <button 
-              onClick={() => setWorkspace("personal")} 
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${!isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
-            >
+            <button onClick={() => setWorkspace("personal")} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${!isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>
               <Home size={14} /> Family
             </button>
-            <button 
-              onClick={() => setWorkspace("business")} 
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
-            >
+            <button onClick={() => setWorkspace("business")} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>
               <Briefcase size={14} /> Business
             </button>
           </div>
           
-          <Link href="/settings" className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-white/40 dark:border-gray-700/50 rounded-2xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300 active:scale-95">
-            <Settings size={22} />
-          </Link>
+          <div className="flex gap-2">
+            {/* The New Savings Goal Button */}
+            <Link href="/savings" className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-amber-200 dark:border-amber-900/30 rounded-2xl shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-amber-600 dark:text-amber-500 active:scale-95">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.5-1 2-2h2v-4h-2.13c.09-.32.13-.65.13-1 0-2.8-2.2-5-5-5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
+            </Link>
+
+            {/* Owner-Only Settings Button */}
+            {isOwner && (
+              <Link href="/settings" className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300 active:scale-95">
+                <Settings size={22} />
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Dynamic Balance Card */}
