@@ -151,11 +151,24 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     if (lockoutTime) return;
     setIsLoading(true);
 
+    const code = generatePairingCode();
+    
+    // Define the perfect starter kit
+    const defaultExpenses = ['Groceries', 'Transport', 'Utilities', 'Dining Out', 'Shopping'];
+    const defaultIncomes = ['Salary', 'Business', 'Freelance'];
+    const defaultBudgets = { 'Groceries': 0, 'Transport': 0, 'Utilities': 0, 'Dining Out': 0, 'Shopping': 0 };
+
     const { data, error } = await supabase
       .from('families')
-      .select('id')
-      .eq('id', familyId)
-      .eq('vault_pin', pinInput)
+      .insert([{ 
+        family_name: vaultName, 
+        pairing_code: code, 
+        vault_pin: pinInput,
+        expense_categories: defaultExpenses,
+        income_categories: defaultIncomes,
+        budget_limits: defaultBudgets
+      }])
+      .select()
       .single();
 
     setIsLoading(false);

@@ -39,12 +39,10 @@ export default function SettingsPage() {
         .eq('id', familyId)
         .single();
 
-      if (data && !error) {
-        setExpenseCats(data.expense_categories || ['Food', 'Transport', 'Utilities', 'Shopping']);
-        setIncomeCats(data.income_categories || ['Salary', 'Business']);
+      if (data && !error) {setExpenseCats(data.expense_categories ?? []);
+        setIncomeCats(data.income_categories ?? []);
         setExpectedIncome(data.expected_monthly_income || 0);
-        setBudgetLimits(data.budget_limits || {});
-      }
+        setBudgetLimits(data.budget_limits ?? {});}
     }
     setIsLoading(false);
   }, []);
