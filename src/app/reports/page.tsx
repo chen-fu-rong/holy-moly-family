@@ -8,6 +8,7 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   
   // Budget Data
+  const [expectedIncome, setExpectedIncome] = useState(0);
   // const [expectedIncome, setExpectedIncome] = useState(0);
   const [budgetLimits, setBudgetLimits] = useState<Record<string, number>>({});
   

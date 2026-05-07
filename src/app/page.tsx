@@ -162,7 +162,7 @@ export default function Dashboard() {
           </h3>
 
           <div className="space-y-3">
-            {transactions.map((tx) => (
+            {transactions.map((tx: any) => (
               <div key={tx.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm transform-gpu transition-transform active:scale-95">
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-xl ${tx.type === 'income' ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100/80 dark:bg-rose-900/30 text-rose-600'}`}>
@@ -180,7 +180,7 @@ export default function Dashboard() {
                     {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()}
                   </p>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">
-                    {new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
