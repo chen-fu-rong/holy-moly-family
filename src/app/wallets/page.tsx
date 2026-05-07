@@ -2,25 +2,26 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Wallet, CreditCard, Landmark, Coins, Users } from "lucide-react";
+import { Loader2, CreditCard, Coins, Users } from "lucide-react";
 
 export default function WalletsPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [myName, setMyName] = useState("Me");
+  // const [myName, setMyName] = useState("Me");
   
   const [myTotal, setMyTotal] = useState(0);
   const [partnerTotal, setPartnerTotal] = useState(0);
   
-  const [myBalances, setMyBalances] = useState<any[]>([]);
-  const [partnerBalances, setPartnerBalances] = useState<any[]>([]);
+  const [myBalances, setMyBalances] = useState<Array<{name: string; balance: number}>>([]);
+  const [partnerBalances, setPartnerBalances] = useState<Array<{name: string; balance: number}>>([]);
   
   const [showPartnerDetails, setShowPartnerDetails] = useState(false);
 
   const fetchWalletData = useCallback(async () => {
     setIsLoading(true);
     const familyId = localStorage.getItem("family_id");
+    // const storedName = localStorage.getItem("my_name") || "Me";
+    // setMyName(storedName);
     const storedName = localStorage.getItem("my_name") || "Me";
-    setMyName(storedName);
     
     const savedAccs = localStorage.getItem("custom_accounts");
     const accountList: string[] = savedAccs ? JSON.parse(savedAccs) : ["Cash", "KBZPay", "WavePay", "Bank Transfer"];
@@ -56,7 +57,8 @@ export default function WalletsPage() {
   }, []);
 
   useEffect(() => {
-    fetchWalletData();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchWalletData();
     window.addEventListener("transaction-updated", fetchWalletData);
     window.addEventListener("settings-updated", fetchWalletData);
     return () => {

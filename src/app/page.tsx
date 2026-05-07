@@ -6,7 +6,7 @@ import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, H
 import Link from "next/link";
 
 export default function Dashboard() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Array<{id: string; amount: number; type: string; category: string; account: string; spender: string; notes: string; date: string}>>([]);
   const [isSyncing, setIsSyncing] = useState(true);
   const [myName, setMyName] = useState("Me");
   

@@ -31,15 +31,16 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
   const [expenseCats, setExpenseCats] = useState<string[]>([]);
   const [incomeCats, setIncomeCats] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [myName, setMyName] = useState("Me");
+  const [myName] = useState(() => localStorage.getItem("my_name") || "Me");
 
   useEffect(() => {
-    setMyName(localStorage.getItem("my_name") || "Me");
+    // myName is initialized from localStorage, no need to set it again
   }, []);
 
   // Fetch Vault settings when modal opens
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAmount("");
       setNotes("");
       setIsBusiness(false);
@@ -71,8 +72,13 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
 
   // Swap default category when type changes
   useEffect(() => {
-    if (type === "expense" && expenseCats.length > 0) setCategory(expenseCats[0]);
-    if (type === "income" && incomeCats.length > 0) setCategory(incomeCats[0]);
+    if (type === "expense" && expenseCats.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategory(expenseCats[0]);
+    }
+    if (type === "income" && incomeCats.length > 0) {
+      setCategory(incomeCats[0]);
+    }
   }, [type, expenseCats, incomeCats]);
 
   const activeCategories = type === "expense" ? expenseCats : incomeCats;

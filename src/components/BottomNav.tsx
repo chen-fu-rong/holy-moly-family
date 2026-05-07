@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Wallet, Plus, HandCoins, PieChart } from "lucide-react";
+import { Home, Wallet, Plus, HandCoins, PieChart, type LucideIcon } from "lucide-react";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -15,7 +15,7 @@ export default function BottomNav() {
     { name: "Reports", href: "/reports", icon: PieChart },
   ];
 
-  const renderNavPill = (item: any) => {
+  const renderNavPill = (item: { name: string; href: string; icon: LucideIcon; isAction?: boolean }) => {
     const isActive = pathname === item.href;
     const Icon = item.icon;
 

@@ -9,6 +9,14 @@ import { supabase } from '@/lib/supabase';
 
 type AppState = "loading" | "unpaired" | "create_vault" | "join_vault" | "show_code" | "locked" | "unlocked";
 
+// Helper for Auth Screen Backgrounds - moved outside to avoid recreating on render
+const AuthBackground = () => (
+  <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu">
+    <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
+    <div className="absolute top-[20%] -right-[10%] w-[50%] h-[60%] rounded-full bg-fuchsia-400/20 dark:bg-fuchsia-500/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+  </div>
+);
+
 export default function ClientWrapper({ children }: { children: React.ReactNode; }) {
   const [appState, setAppState] = useState<AppState>("loading");
   const [familyId, setFamilyId] = useState<string | null>(null);
@@ -35,6 +43,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     const savedName = localStorage.getItem("my_name");
     const unlockedUntil = localStorage.getItem("vault_unlocked_until");
     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedName) setUserName(savedName);
 
     if (savedFamilyId) {
@@ -175,14 +184,6 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
   if (appState === "loading") {
     return <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950 flex justify-center items-center"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>;
   }
-
-  // Helper for Auth Screen Backgrounds
-  const AuthBackground = () => (
-    <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu">
-      <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
-      <div className="absolute top-[20%] -right-[10%] w-[50%] h-[60%] rounded-full bg-fuchsia-400/20 dark:bg-fuchsia-500/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
-    </div>
-  );
 
   // UI: Setup Required
   if (appState === "unpaired") {

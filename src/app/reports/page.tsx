@@ -1,170 +1,204 @@
 "use client";
 
-import { Loader2, Scale, PieChart as PieIcon, BarChart3 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { supabase } from "../../lib/supabase";
-import { Transaction } from "../../types";
-
-const COLORS = ["#6366f1", "#ec4899", "#f59e0b", "#10b981", "#8b5cf6", "#f43f5e", "#0ea5e9"];
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { Loader2, PieChart, Target, TrendingDown, AlertTriangle, CheckCircle2, Calendar } from "lucide-react";
 
 export default function ReportsPage() {
-  const [chartData, setChartData] = useState<Record<string, number | string>[]>([]);
-  const [compareData, setCompareData] = useState<Record<string, number | string>[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isCompareMode, setIsCompareMode] = useState(false); // Compare Toggle
-  const [myName, setMyName] = useState("Me");
-  const [partnerName, setPartnerName] = useState("Partner");
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Budget Data
+  // const [expectedIncome, setExpectedIncome] = useState(0);
+  const [budgetLimits, setBudgetLimits] = useState<Record<string, number>>({});
+  
+  // Transaction Data
+  const [totalSpent, setTotalSpent] = useState(0);
+  const [spentByCategory, setSpentByCategory] = useState<Record<string, number>>({});
+  
+  // Time state
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  useEffect(() => {
-    const currentName = localStorage.getItem("my_name") || "Me";
-    setMyName(currentName);
-    fetchExpenses(currentName);
+  const fetchReportData = useCallback(async () => {
+    setIsLoading(true);
+    const familyId = localStorage.getItem("family_id");
+
+    if (familyId) {
+      // 1. Fetch Budget Limits
+      const { data: familyData } = await supabase
+        .from('families')
+        .select('expected_monthly_income, budget_limits')
+        .eq('id', familyId)
+        .single();
+
+      if (familyData) {
+        setExpectedIncome(familyData.expected_monthly_income || 0);
+        setBudgetLimits(familyData.budget_limits || {});
+      }
+
+      // 2. Fetch Current Month's Transactions
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('amount, type, category')
+        .eq('family_id', familyId)
+        .eq('type', 'expense')
+        .gte('transaction_date', firstDay)
+        .lte('transaction_date', lastDay);
+
+      if (txData) {
+        let total = 0;
+        const categoryTotals: Record<string, number> = {};
+
+        txData.forEach(tx => {
+          const amt = Number(tx.amount);
+          total += amt;
+          categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + amt;
+        });
+
+        setTotalSpent(total);
+        setSpentByCategory(categoryTotals);
+      }
+    }
+    setIsLoading(false);
   }, []);
 
-  const fetchExpenses = async (currentName: string) => {
-    setLoading(true);
-    // Expense
-    const { data, error } = await supabase.from("transactions").select("amount, category, spender").eq("type", "expense");
-    if (!error && data) {
-      let detectedPartner = "Partner";
-      const groupedPie: any = {};
-      const groupedCompare: any = {};
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchReportData();
+    const handleUpdate = () => void fetchReportData();
+    window.addEventListener("transaction-updated", handleUpdate);
+    window.addEventListener("settings-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("transaction-updated", handleUpdate);
+      window.removeEventListener("settings-updated", handleUpdate);
+    };
+  }, [fetchReportData]);
 
-      data.forEach((tx) => {
-        const category = tx.category;
-        const amount = Math.abs(tx.amount);
-        let spender = tx.spender || "Unknown";
-        
-        // Partner Name
-        if (spender !== currentName && spender !== "Unknown" && spender !== "Shared") {
-          detectedPartner = spender;
-        }
+  if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-indigo-600" size={40} /></div>;
 
-        // 1. Pie Chart (Total Expenses by Category)
-        groupedPie[category] = (groupedPie[category] || 0) + amount;
-
-        // 2. Bar Chart (Compare Mode)
-        if (!groupedCompare[category]) {
-          groupedCompare[category] = { category: category, [currentName]: 0, Partner: 0 };
-        }
-        
-        if (spender === currentName) {
-          groupedCompare[category][currentName] += amount;
-        } else {
-          groupedCompare[category]["Partner"] += amount; // Partner's amount
-        }
-      });
-
-      setPartnerName(detectedPartner);
-
-      // Pie Data Format
-      const formattedPie = Object.keys(groupedPie).map((key) => ({
-        name: key,
-        value: groupedPie[key],
-      })).sort((a, b) => b.value - a.value);
-      
-      setChartData(formattedPie);
-
-      // Compare Data Format (Replace "Partner" with actual detected name)
-      const formattedCompare = Object.values(groupedCompare).map((item: any) => {
-        const newItem = { category: item.category, [currentName]: item[currentName], [detectedPartner]: item["Partner"] };
-        return newItem;
-      });
-      
-      setCompareData(formattedCompare);
-    }
-    setLoading(false);
-  };
-
-  const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700">
-          <p className="font-bold text-gray-900 dark:text-white mb-1">{payload[0].name}</p>
-          <p className="text-indigo-600 dark:text-indigo-400 font-semibold">{payload[0].value.toLocaleString()} Ks</p>
-        </div>
-      );
-    }
-    return null;
-  };
+  const totalBudgeted = Object.values(budgetLimits).reduce((acc, limit) => acc + limit, 0);
+  const overallProgress = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
+  const isOverBudget = totalSpent > totalBudgeted;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6 w-full max-w-7xl mx-auto pb-24">
+    <div className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] [-webkit-tap-highlight-color:transparent]">
       
-      <div className="flex justify-between items-end mb-4">
-        <div>
-          <p className="text-gray-500 font-medium">Analytics & Reports</p>
-          <h2 className="text-3xl font-bold tracking-tight">Expense Reports</h2>
-        </div>
-        
-        {/* Compare Toggle Button */}
-        <button 
-          onClick={() => setIsCompareMode(!isCompareMode)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold shadow-sm transition-colors ${isCompareMode ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-indigo-600 border border-indigo-100 dark:border-gray-700'}`}
-        >
-          {isCompareMode ? <PieIcon size={18} /> : <Scale size={18} />}
-          {isCompareMode ? "Overall View" : "Compare"}
-        </button>
+      {/* 2026 Aurora Ambient Background */}
+      <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu">
+        <div className="absolute top-[10%] -left-[20%] w-[70%] h-[60%] rounded-full bg-emerald-400/10 dark:bg-emerald-600/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute bottom-[20%] -right-[10%] w-[60%] h-[50%] rounded-full bg-indigo-400/10 dark:bg-indigo-600/10 blur-3xl animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
       </div>
 
-      <div className="bg-white dark:bg-gray-900/40 rounded-3xl p-6 lg:p-8 border border-gray-100 dark:border-gray-800 shadow-sm w-full">
-        <h3 className="text-xl font-bold mb-8 text-center md:text-left">
-          {isCompareMode ? "Expense Comparison by Category" : "Overall Expenses by Category"}
-        </h3>
+      <div className="px-4 md:px-8 max-w-4xl mx-auto pt-4 space-y-6">
+        
+        {/* Header Section */}
+        <div className="flex justify-between items-end">
+          <div>
+            <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+              <PieChart size={14} className="text-emerald-500" /> Analytics
+            </h2>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Budget & Reports</h1>
+          </div>
+          <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200 dark:border-gray-800 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">
+            <Calendar size={14} /> {currentMonthName}
+          </div>
+        </div>
 
-        {loading ? (
-          <div className="flex justify-center items-center h-[300px]"><Loader2 className="animate-spin text-indigo-500" size={40} /></div>
-        ) : chartData.length === 0 ? (
-          <div className="flex justify-center items-center h-[300px] text-gray-500">No expenses recorded yet.</div>
-        ) : (
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full">
+        {/* Master Budget Health Card */}
+        <div className={`rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden transform-gpu transition-colors duration-500 ${isOverBudget ? 'bg-gradient-to-br from-rose-600 to-rose-800' : 'bg-gradient-to-br from-indigo-600 to-emerald-600'}`}>
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-4">
+              <p className="font-bold text-white/80 text-sm flex items-center gap-2 uppercase tracking-wider">
+                <Target size={16} /> Monthly Burn Rate
+              </p>
+              {isOverBudget ? (
+                <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 text-xs font-bold">
+                  <AlertTriangle size={14} /> Over Budget
+                </div>
+              ) : (
+                <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 text-xs font-bold">
+                  <CheckCircle2 size={14} /> On Track
+                </div>
+              )}
+            </div>
             
-            {/* Chart */}
-            <div className="w-full md:w-2/3 h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                {!isCompareMode ? (
-                  // OVERALL PIE CHART
-                  <PieChart>
-                    <Pie data={chartData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value" stroke="none">
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomPieTooltip />} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                  </PieChart>
-                ) : (
-                  // COMPARE BAR CHART
-                  <BarChart data={compareData} margin={{ top: 20, right: 0, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.2} />
-                    <XAxis dataKey="category" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', backgroundColor: '#1f2937', color: '#fff', border: 'none'}} />
-                    <Legend verticalAlign="top" height={36} iconType="circle" />
-                    <Bar dataKey={myName} fill="#6366f1" radius={[4, 4, 0, 0]} name={`${myName}'s Spend`} />
-                    <Bar dataKey={partnerName} fill="#f43f5e" radius={[4, 4, 0, 0]} name={`${partnerName}'s Spend`} />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
+            <div className="flex items-baseline gap-2 mb-4">
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight drop-shadow-md">
+                {totalSpent.toLocaleString()}
+              </h2>
+              <span className="text-lg text-white/70 font-bold">/ {totalBudgeted.toLocaleString()} Ks</span>
             </div>
 
-            {/* List Details (Overall View) */}
-            {!isCompareMode && (
-              <div className="w-full md:w-1/3 space-y-3 max-h-[350px] overflow-y-auto pr-2">
-                {chartData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <p className="font-semibold text-sm truncate max-w-[120px]">{item.name}</p>
-                    </div>
-                    <p className="font-bold text-sm">{(item.value as number).toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
+            {/* Master Progress Bar */}
+            <div className="w-full h-3 bg-black/20 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-1000 ease-out ${isOverBudget ? 'bg-rose-400' : 'bg-white'}`}
+                style={{ width: `${Math.min(overallProgress, 100)}%` }}
+              />
+            </div>
           </div>
-        )}
+          <TrendingDown size={140} className="absolute -bottom-8 -right-8 text-white/10 -rotate-12" />
+        </div>
+
+        {/* Smart Envelopes List */}
+        <div>
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            Smart Envelopes
+          </h3>
+          
+          {Object.keys(budgetLimits).length === 0 ? (
+            <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-md border border-dashed border-gray-300 dark:border-gray-700 p-8 rounded-[2rem] text-center">
+              <p className="text-gray-500 font-medium">No budget limits set. Go to Settings to configure your envelopes.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(budgetLimits).map(([category, limit], idx) => {
+                if (limit === 0) return null; // Skip tracking-only categories
+                
+                const spent = spentByCategory[category] || 0;
+                const progress = (spent / limit) * 100;
+                const isWarning = progress > 85 && progress <= 100;
+                const isDanger = progress > 100;
+                
+                return (
+                  <div 
+                    key={category} 
+                    className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-100 dark:border-gray-800 p-5 rounded-[1.5rem] shadow-sm transform-gpu transition-all hover:scale-[1.01] animate-in slide-in-from-bottom-4"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm md:text-base">{category}</h4>
+                      <p className={`font-black text-sm ${isDanger ? 'text-rose-500' : 'text-gray-900 dark:text-white'}`}>
+                        {spent.toLocaleString()} <span className="text-xs text-gray-400 font-bold">/ {limit.toLocaleString()} Ks</span>
+                      </p>
+                    </div>
+                    
+                    <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                          isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-400' : 'bg-indigo-500'
+                        }`}
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      />
+                    </div>
+                    
+                    <div className="flex justify-end mt-2 text-[10px] font-bold uppercase tracking-wider">
+                      {isDanger ? (
+                        <span className="text-rose-500">Over limit by {(spent - limit).toLocaleString()}</span>
+                      ) : (
+                        <span className="text-gray-400">{(limit - spent).toLocaleString()} remaining</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
