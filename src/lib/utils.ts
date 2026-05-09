@@ -2,14 +2,19 @@
  * Trigger a small haptic vibration for mobile devices
  */
 export const triggerHaptic = (style: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' = 'medium') => {
-  if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.vibrate) {
-    switch (style) {
-      case 'light': navigator.vibrate(15); break;
-      case 'medium': navigator.vibrate(30); break;
-      case 'heavy': navigator.vibrate(60); break;
-      case 'success': navigator.vibrate([15, 30, 15]); break;
-      case 'warning': navigator.vibrate([30, 50]); break;
-      case 'error': navigator.vibrate([60, 100, 60]); break;
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+    if (navigator.vibrate) {
+      switch (style) {
+        case 'light': navigator.vibrate(15); break;
+        case 'medium': navigator.vibrate(30); break;
+        case 'heavy': navigator.vibrate(60); break;
+        case 'success': navigator.vibrate([15, 30, 15]); break;
+        case 'warning': navigator.vibrate([30, 50]); break;
+        case 'error': navigator.vibrate([60, 100, 60]); break;
+      }
+    } else {
+      // Fallback for iOS/Safari: Dispatch a visual haptic event
+      window.dispatchEvent(new CustomEvent('visual-haptic', { detail: { style } }));
     }
   }
 };

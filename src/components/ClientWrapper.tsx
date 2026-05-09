@@ -10,16 +10,23 @@ import { useVaultStore } from '@/lib/store';
 
 type AppState = "loading" | "unpaired" | "create_vault" | "join_vault" | "show_code" | "pending_approval" | "locked" | "unlocked";
 
-// Helper for Auth Screen Backgrounds - moved outside to avoid recreating on render
-const AuthBackground = () => (
-  <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu">
-    <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
-    <div className="absolute top-[20%] -right-[10%] w-[50%] h-[60%] rounded-full bg-fuchsia-400/20 dark:bg-fuchsia-500/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
-  </div>
-);
-
 export default function ClientWrapper({ children }: { children: React.ReactNode; }) {
   const [appState, setAppState] = useState<AppState>("loading");
+  // ... (keeping other states)
+  const [isVisualFeedback, setIsVisualFeedback] = useState(false);
+
+  useEffect(() => {
+    const handleVisualHaptic = (e: any) => {
+      const style = e.detail?.style;
+      setIsVisualFeedback(true);
+      setTimeout(() => setIsVisualFeedback(false), style === 'heavy' ? 150 : 80);
+    };
+
+    window.addEventListener('visual-haptic', handleVisualHaptic);
+    return () => window.removeEventListener('visual-haptic', handleVisualHaptic);
+  }, []);
+
+  // ... rest of the existing code
   const [familyId, setFamilyId] = useState<string | null>(null);
   
   // Form States
@@ -464,7 +471,12 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
   // UNLOCKED STATE (The actual app)
   return (
     <Providers>
-      <div className="flex min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent]">
+      {/* iOS Haptic Fallback Overlay */}
+      {isVisualFeedback && (
+        <div className="fixed inset-0 z-[100] pointer-events-none bg-white/10 dark:bg-white/5 animate-in fade-in duration-75 mix-blend-overlay" />
+      )}
+      
+      <div className={`flex min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent] transition-transform duration-75 ${isVisualFeedback ? 'scale-[0.995]' : 'scale-100'}`}>
         <BottomNav />
         {/* TopBar completely removed to reclaim screen real estate */}
         <div className="flex-1 flex flex-col md:ml-24 min-w-0 min-h-[100dvh] bg-transparent">

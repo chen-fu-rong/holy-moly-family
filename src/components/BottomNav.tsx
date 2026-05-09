@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Wallet, Plus, HandCoins, PieChart, type LucideIcon } from "lucide-react";
+import { triggerHaptic } from "@/lib/utils";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -20,7 +21,12 @@ export default function BottomNav() {
     const Icon = item.icon;
 
     return (
-      <Link key={item.name} href={item.href} className="relative group z-10">
+      <Link 
+        key={item.name} 
+        href={item.href} 
+        onClick={() => triggerHaptic('light')}
+        className="relative group z-10"
+      >
         <div className={`flex items-center gap-1.5 px-3 py-2.5 rounded-full transition-all duration-300 ease-out transform-gpu ${
           isActive
             ? "bg-indigo-100/80 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shadow-sm"

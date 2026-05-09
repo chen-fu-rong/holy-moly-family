@@ -67,8 +67,19 @@ export default function Dashboard() {
 
   // Touch handlers for Pull-to-Refresh
   const handleTouchStart = (e: React.TouchEvent) => { if (window.scrollY === 0) setStartY(e.touches[0].clientY); };
-  const handleTouchMove = (e: React.TouchEvent) => { if (startY > 0 && e.touches[0].clientY - startY > 70) setIsPulling(true); };
-  const handleTouchEnd = () => { if (isPulling) { fetchData(); setStartY(0); } };
+  const handleTouchMove = (e: React.TouchEvent) => { 
+    if (startY > 0 && e.touches[0].clientY - startY > 70 && !isPulling) {
+      setIsPulling(true);
+      triggerHaptic('light');
+    } 
+  };
+  const handleTouchEnd = () => { 
+    if (isPulling) { 
+      triggerHaptic('medium');
+      fetchData(); 
+      setStartY(0); 
+    } 
+  };
 
   const handleDelete = async (id: string) => {
     await deleteTransaction(id);
