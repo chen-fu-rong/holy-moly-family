@@ -1,0 +1,42 @@
+/**
+ * Trigger a small haptic vibration for mobile devices
+ */
+export const triggerHaptic = (style: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' = 'medium') => {
+  if (typeof window !== 'undefined' && navigator.vibrate) {
+    switch (style) {
+      case 'light': navigator.vibrate(10); break;
+      case 'medium': navigator.vibrate(20); break;
+      case 'heavy': navigator.vibrate(50); break;
+      case 'success': navigator.vibrate([10, 30, 10]); break;
+      case 'warning': navigator.vibrate([20, 50]); break;
+      case 'error': navigator.vibrate([50, 50, 50]); break;
+    }
+  }
+};
+
+/**
+ * Export an array of objects to CSV
+ */
+export const exportToCSV = (data: any[], filename: string) => {
+  if (!data || !data.length) return;
+  
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(','),
+    ...data.map(row => headers.map(header => {
+      const val = row[header];
+      return typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val;
+    }).join(','))
+  ].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};

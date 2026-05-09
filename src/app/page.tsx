@@ -1,112 +1,66 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home } from "lucide-react";
 import Link from "next/link";
+import { useVaultStore } from "@/lib/store";
 
 export default function Dashboard() {
-  const [isOwner, setIsOwner] = useState(false);
-
-useEffect(() => {
-  if (localStorage.getItem("is_vault_owner") === "true") {
-    setIsOwner(true);
-  }
-}, []);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [isSyncing, setIsSyncing] = useState(true);
+  const isOwner = useVaultStore(state => state.isOwner);
+  const transactions = useVaultStore(state => state.transactions);
+  const loans = useVaultStore(state => state.loans);
+  const currency = useVaultStore(state => state.currency);
+  const isSyncing = useVaultStore(state => state.isLoading);
   const [myName, setMyName] = useState("Me");
   
   // Workspace State
   const [workspace, setWorkspace] = useState<"personal" | "business">("personal");
 
-  // Global Math
-  const [personalBalance, setPersonalBalance] = useState<number>(0);
-  const [businessProfit, setBusinessProfit] = useState<number>(0);
-  
-  // Daily Math
-  const [dailyPersonalIncome, setDailyPersonalIncome] = useState<number>(0);
-  const [dailyPersonalExpense, setDailyPersonalExpense] = useState<number>(0);
-  const [dailyBusinessIncome, setDailyBusinessIncome] = useState<number>(0);
-  const [dailyBusinessExpense, setDailyBusinessExpense] = useState<number>(0);
+  useEffect(() => {
+    setMyName(localStorage.getItem("my_name") || "Me");
+  }, []);
 
-  const [totalOutstanding, setTotalOutstanding] = useState<number>(0);
+  // Use Memo for heavy math to avoid recalculating on every render
+  const stats = useMemo(() => {
+    let pIncome = 0, pExpense = 0, bIncome = 0, bExpense = 0;
+    let todayPIncome = 0, todayPExpense = 0, todayBIncome = 0, todayBExpense = 0;
+    const todayStr = new Date().toLocaleDateString();
+
+    transactions.forEach(tx => {
+      const amt = Number(tx.amount);
+      const isToday = new Date(tx.transaction_date).toLocaleDateString() === todayStr;
+
+      if (tx.is_business_overhead) {
+        if (tx.type === 'income') { bIncome += amt; if (isToday) todayBIncome += amt; }
+        else { bExpense += amt; if (isToday) todayBExpense += amt; }
+      } else {
+        if (tx.type === 'income') { pIncome += amt; if (isToday) todayPIncome += amt; }
+        else { pExpense += amt; if (isToday) todayPExpense += amt; }
+      }
+    });
+
+    const totalBorrowed = loans.filter(l => l.status === 'active' && l.type === 'borrowed').reduce((acc, curr) => acc + Number(curr.principal_amount), 0);
+
+    return {
+      personalBalance: pIncome - pExpense,
+      businessProfit: bIncome - bExpense,
+      dailyPersonalIncome: todayPIncome,
+      dailyPersonalExpense: todayPExpense,
+      dailyBusinessIncome: todayBIncome,
+      dailyBusinessExpense: todayBExpense,
+      totalOutstanding: totalBorrowed
+    };
+  }, [transactions, loans]);
+
   const [startY, setStartY] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setIsSyncing(true);
     const familyId = localStorage.getItem("family_id");
-    const name = localStorage.getItem("my_name") || "Me";
-    setMyName(name);
-
-    if (!familyId) return;
-
-    try {
-      const { data: txData, error: txError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('family_id', familyId)
-        .order('transaction_date', { ascending: false })
-        .limit(200); // Fetch a bit more to ensure we have enough to split
-
-      if (txError) throw txError;
-      if (txData) {
-        setTransactions(txData);
-        
-        let pIncome = 0, pExpense = 0, bIncome = 0, bExpense = 0;
-        let todayPIncome = 0, todayPExpense = 0, todayBIncome = 0, todayBExpense = 0;
-        
-        const todayStr = new Date().toLocaleDateString();
-
-        txData.forEach(tx => {
-          const amt = Number(tx.amount);
-          const isToday = new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleDateString() === todayStr;
-
-          if (tx.is_business_overhead) {
-            if (tx.type === 'income') { bIncome += amt; if (isToday) todayBIncome += amt; }
-            else { bExpense += amt; if (isToday) todayBExpense += amt; }
-          } else {
-            if (tx.type === 'income') { pIncome += amt; if (isToday) todayPIncome += amt; }
-            else { pExpense += amt; if (isToday) todayPExpense += amt; }
-          }
-        });
-
-        // The Virtual Split!
-        setPersonalBalance(pIncome - pExpense);
-        setBusinessProfit(bIncome - bExpense);
-
-        setDailyPersonalIncome(todayPIncome);
-        setDailyPersonalExpense(todayPExpense);
-        setDailyBusinessIncome(todayBIncome);
-        setDailyBusinessExpense(todayBExpense);
-      }
-
-      // Debt Fetching (We owe)
-      const { data: loanData, error: loanError } = await supabase
-        .from('loans')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('status', 'active');
-
-      if (loanError) throw loanError;
-      if (loanData) {
-        const totalBorrowed = loanData.filter(l => l.type === 'borrowed').reduce((acc, curr) => acc + Number(curr.principal_amount), 0);
-        setTotalOutstanding(totalBorrowed);
-      }
-    } catch (error) {
-      console.error("Error fetching vault data:", error);
-    } finally {
-      setIsSyncing(false);
-      setIsPulling(false);
-    }
+    if (familyId) await useVaultStore.getState().fetchVaultData(familyId);
+    setIsPulling(false);
   }, []);
-
-  useEffect(() => {
-    fetchData();
-    window.addEventListener("transaction-updated", fetchData);
-    return () => window.removeEventListener("transaction-updated", fetchData);
-  }, [fetchData]);
 
   // Touch handlers for Pull-to-Refresh
   const handleTouchStart = (e: React.TouchEvent) => { if (window.scrollY === 0) setStartY(e.touches[0].clientY); };
@@ -115,10 +69,25 @@ useEffect(() => {
 
   // Determine Active Workspace Variables
   const isBusiness = workspace === "business";
-  const activeBalance = isBusiness ? businessProfit : personalBalance;
-  const activeIncome = isBusiness ? dailyBusinessIncome : dailyPersonalIncome;
-  const activeExpense = isBusiness ? dailyBusinessExpense : dailyPersonalExpense;
+  const activeBalance = isBusiness ? stats.businessProfit : stats.personalBalance;
+  const activeIncome = isBusiness ? stats.dailyBusinessIncome : stats.dailyPersonalIncome;
+  const activeExpense = isBusiness ? stats.dailyBusinessExpense : stats.dailyPersonalExpense;
   const activeTransactions = transactions.filter(tx => tx.is_business_overhead === isBusiness);
+
+  if (isSyncing && transactions.length === 0) {
+    return (
+      <div className="px-4 md:px-8 max-w-4xl mx-auto pt-24 space-y-6">
+        <div className="h-48 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-[2rem]" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-32 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-[2rem]" />
+          <div className="h-32 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-[2rem]" />
+        </div>
+        <div className="space-y-3">
+          {[1,2,3,4].map(i => <div key={i} className="h-20 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -174,13 +143,13 @@ useEffect(() => {
                 {isBusiness ? 'Business Net Profit' : 'Personal Liquidity'}
               </p>
               <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4 drop-shadow-sm">
-                {activeBalance.toLocaleString()} <span className="text-xl text-white/60">Ks</span>
+                {activeBalance.toLocaleString()} <span className="text-xl text-white/60">{currency}</span>
               </h2>
               
               {!isBusiness && (
                 <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
                   <HandCoins size={14} className="text-rose-200" /> 
-                  <span>We Owe: {totalOutstanding.toLocaleString()} Ks</span>
+                  <span>We Owe: {stats.totalOutstanding.toLocaleString()} {currency}</span>
                 </div>
               )}
             </div>
@@ -239,7 +208,7 @@ useEffect(() => {
                   </div>
                   <div className="text-right">
                     <p className={`font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
-                      {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()}
+                      {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()} {currency}
                     </p>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">
                       {new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

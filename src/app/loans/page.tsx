@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, ArrowUpRight, ArrowDownRight, CheckCircle2, User, AlignLeft, CalendarClock, Percent, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, ArrowUpRight, ArrowDownRight, CheckCircle2, User, AlignLeft, CalendarClock, Percent, Trash2, AlertTriangle, TrendingUp } from "lucide-react";
+import { useVaultStore } from "@/lib/store";
 
 export default function LoansPage() {
+  const currency = useVaultStore(state => state.currency);
   const [loans, setLoans] = useState<Array<{
     id: string;
     family_id: string;
@@ -98,11 +100,46 @@ export default function LoansPage() {
     fetchLoans();
   };
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-indigo-600" size={40} /></div>;
+  // 2026 Smart Interest Calculator
+  const calculateCurrentBalance = (principal: number, rate: number, startDate: string) => {
+    if (rate === 0) return principal;
+    
+    const start = new Date(startDate);
+    const now = new Date();
+    
+    // Calculate months passed
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    
+    // If it's been less than a full month but at least 1 day, count as 1 month (or could use fractional)
+    // For family/partner loans, simple monthly is usually best.
+    if (months < 1) {
+      const days = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      if (days > 0) months = 1; // Minimum 1 month if at least a day has passed
+    }
+    
+    const interest = principal * (rate / 100) * months;
+    return principal + interest;
+  };
 
-  const activeLoans = loans.filter(l => l.status === 'active' && (viewTab === 'me' ? l.owner === myName : l.owner !== myName));
-  const totalOwedToUs = activeLoans.filter(l => l.type === 'lent').reduce((acc, curr) => acc + Number(curr.principal_amount), 0);
-  const totalWeOwe = activeLoans.filter(l => l.type === 'borrowed').reduce((acc, curr) => acc + Number(curr.principal_amount), 0);
+  const stats = useMemo(() => {
+    const active = loans.filter(l => l.status === 'active' && (viewTab === 'me' ? l.owner === myName : l.owner !== myName));
+    
+    const calculated = active.map(l => ({
+      ...l,
+      currentBalance: calculateCurrentBalance(Number(l.principal_amount), Number(l.interest_rate), l.transaction_date)
+    }));
+
+    const receive = calculated.filter(l => l.type === 'lent').reduce((acc, curr) => acc + curr.currentBalance, 0);
+    const pay = calculated.filter(l => l.type === 'borrowed').reduce((acc, curr) => acc + curr.currentBalance, 0);
+
+    return {
+      activeLoans: calculated,
+      totalOwedToUs: receive,
+      totalWeOwe: pay
+    };
+  }, [loans, viewTab, myName]);
+
+  if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-indigo-600" size={40} /></div>;
 
   return (
     <div className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] [-webkit-tap-highlight-color:transparent]">
@@ -140,12 +177,14 @@ export default function LoansPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-3xl">
-            <p className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"><ArrowUpRight size={14}/> To Receive</p>
-            <p className="text-xl font-black text-emerald-900 dark:text-emerald-100 mt-1">{totalOwedToUs.toLocaleString()} Ks</p>
+            <p className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"><TrendingUp size={14}/> To Receive</p>
+            <p className="text-xl font-black text-emerald-900 dark:text-emerald-100 mt-1">{stats.totalOwedToUs.toLocaleString()} {currency}</p>
+            <p className="text-[10px] text-emerald-600/60 font-bold">Incl. Interest</p>
           </div>
           <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-500/20 p-4 rounded-3xl">
             <p className="text-rose-600 dark:text-rose-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"><ArrowDownRight size={14}/> To Pay</p>
-            <p className="text-xl font-black text-rose-900 dark:text-rose-100 mt-1">{totalWeOwe.toLocaleString()} Ks</p>
+            <p className="text-xl font-black text-rose-900 dark:text-rose-100 mt-1">{stats.totalWeOwe.toLocaleString()} {currency}</p>
+            <p className="text-[10px] text-rose-600/60 font-bold">Incl. Interest</p>
           </div>
         </div>
 
@@ -161,7 +200,7 @@ export default function LoansPage() {
                 <input type="text" placeholder="Counterparty Name" value={counterparty} onChange={e => setCounterparty(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 rounded-xl py-3 pl-12 pr-4 outline-none" />
               </div>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Ks</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{currency}</span>
                 <input type="number" placeholder="Principal Amount" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 rounded-xl py-3 pl-12 pr-4 outline-none" />
               </div>
 
@@ -200,24 +239,35 @@ export default function LoansPage() {
         )}
 
         <div className="space-y-3">
-          {activeLoans.map(loan => (
+          {stats.activeLoans.map(loan => (
             <div key={loan.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm group">
               <div className="flex items-center gap-3">
                 <div className={`p-3 rounded-xl ${loan.type === 'lent' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100 dark:bg-rose-900/30 text-rose-600'}`}>
-                  {loan.type === 'lent' ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
+                  {loan.type === 'lent' ? <TrendingUp size={18} /> : <ArrowDownRight size={18} />}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">{loan.counterparty_name}</h3>
                   <p className="text-[10px] text-gray-500">
                     {new Date(loan.transaction_date).toLocaleDateString()} 
-                    {loan.interest_rate > 0 && <span className="text-indigo-500 font-bold ml-1">({loan.interest_rate}% Int)</span>}
+                    {loan.interest_rate > 0 && (
+                      <span className="text-indigo-500 font-bold ml-1 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
+                        {loan.interest_rate}% / mo
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className={`font-black ${loan.type === 'lent' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {Number(loan.principal_amount).toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <p className={`font-black text-sm ${loan.type === 'lent' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {loan.currentBalance.toLocaleString()} <span className="text-[10px]">{currency}</span>
+                  </p>
+                  {loan.interest_rate > 0 && (
+                    <p className="text-[9px] text-gray-400 font-bold">
+                      Principal: {Number(loan.principal_amount).toLocaleString()}
+                    </p>
+                  )}
+                </div>
                 
                 {/* Actions: Settle and Delete */}
                 <div className="flex flex-col gap-1">

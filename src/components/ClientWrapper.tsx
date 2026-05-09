@@ -4,10 +4,11 @@ import Providers from './Providers';
 import BottomNav from './BottomNav';
 import AddModal from './AddModal';
 import { useEffect, useState } from 'react';
-import { Lock, AlertTriangle, Shield, Key, Users, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
+import { Lock, AlertTriangle, Shield, Key, Users, ArrowRight, Loader2, CheckCircle, RefreshCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useVaultStore } from '@/lib/store';
 
-type AppState = "loading" | "unpaired" | "create_vault" | "join_vault" | "show_code" | "locked" | "unlocked";
+type AppState = "loading" | "unpaired" | "create_vault" | "join_vault" | "show_code" | "pending_approval" | "locked" | "unlocked";
 
 // Helper for Auth Screen Backgrounds - moved outside to avoid recreating on render
 const AuthBackground = () => (
@@ -36,25 +37,70 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
 
   // Global Modal State for the floating '+' button
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const fetchVaultData = useVaultStore(state => state.fetchVaultData);
+  const setOwner = useVaultStore(state => state.setOwner);
 
   useEffect(() => {
     // 1. Check if device is already paired to a vault
     const savedFamilyId = localStorage.getItem("family_id");
     const savedName = localStorage.getItem("my_name");
     const unlockedUntil = localStorage.getItem("vault_unlocked_until");
+    const isOwnerStored = localStorage.getItem("is_vault_owner") === "true";
     
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOwner(isOwnerStored);
+
     if (savedName) setUserName(savedName);
 
     if (savedFamilyId) {
       setFamilyId(savedFamilyId);
       
-      // Check if the 7-day session is still valid
-      if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
-        setAppState("unlocked");
-      } else {
-        setAppState("locked");
-      }
+      // Check approval status first
+      const verifyAccess = async () => {
+        const { data } = await supabase
+          .from('families')
+          .select('members')
+          .eq('id', savedFamilyId)
+          .single();
+        
+        if (data?.members) {
+          const myRecord = data.members.find((m: any) => m.name === savedName);
+          if (myRecord?.status === 'approved') {
+            if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
+              setAppState("unlocked");
+              fetchVaultData(savedFamilyId);
+            } else {
+              setAppState("locked");
+            }
+          } else {
+            setAppState("pending_approval");
+          }
+        } else {
+          // If no members field exists yet, assume legacy vault and let them in
+          if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
+            setAppState("unlocked");
+            fetchVaultData(savedFamilyId);
+          } else {
+            setAppState("locked");
+          }
+        }
+      };
+
+      verifyAccess();
+
+      // Real-time listener for this vault
+      const channel = supabase.channel(`vault-${savedFamilyId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `family_id=eq.${savedFamilyId}` }, () => {
+          useVaultStore.getState().syncTransactions(savedFamilyId);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'loans', filter: `family_id=eq.${savedFamilyId}` }, () => {
+          useVaultStore.getState().syncLoans(savedFamilyId);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `family_id=eq.${savedFamilyId}` }, () => {
+          useVaultStore.getState().syncSavings(savedFamilyId);
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
     } else {
       setAppState("unpaired");
     }
@@ -63,7 +109,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     const handleOpenModal = () => setIsModalOpen(true);
     window.addEventListener("open-add-modal", handleOpenModal);
     return () => window.removeEventListener("open-add-modal", handleOpenModal);
-  }, []);
+  }, [fetchVaultData, setOwner]);
 
   // Handle Lockout Timer
   useEffect(() => {
@@ -98,7 +144,12 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     
     const { data, error } = await supabase
       .from('families')
-      .insert([{ family_name: vaultName, pairing_code: code, vault_pin: pinInput }])
+      .insert([{ 
+        family_name: vaultName, 
+        pairing_code: code, 
+        vault_pin: pinInput,
+        members: [{ name: userName.trim(), status: 'approved' }]
+      }])
       .select()
       .single();
 
@@ -122,6 +173,30 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     setAppState("show_code");
   };
 
+  const checkApprovalStatus = async () => {
+    const savedFamilyId = localStorage.getItem("family_id");
+    const savedName = localStorage.getItem("my_name");
+    if (!savedFamilyId || !savedName) return;
+
+    setIsLoading(true);
+    const { data } = await supabase
+      .from('families')
+      .select('members')
+      .eq('id', savedFamilyId)
+      .single();
+    setIsLoading(false);
+
+    if (data?.members) {
+      const myRecord = data.members.find((m: any) => m.name === savedName);
+      if (myRecord?.status === 'approved') {
+        localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
+        setAppState("unlocked");
+      } else {
+        alert("Still waiting for approval.");
+      }
+    }
+  };
+
   const handleJoinVault = async () => {
     if (!userName.trim() || !pairingCodeInput || !pinInput) return alert("Fill in all fields.");
     setIsLoading(true);
@@ -140,13 +215,31 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       return;
     }
 
+    // Add member to pending list
+    const currentMembers = data.members || [];
+    const isAlreadyMember = currentMembers.some((m: any) => m.name === userName.trim());
+    
+    if (!isAlreadyMember) {
+      const updatedMembers = [...currentMembers, { name: userName.trim(), status: 'pending' }];
+      await supabase
+        .from('families')
+        .update({ members: updatedMembers })
+        .eq('id', data.id);
+    }
+
     localStorage.setItem("family_id", data.id);
     localStorage.setItem("my_name", userName.trim());
     localStorage.setItem("my_setup_complete", "true");
-    localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
     
-    setFamilyId(data.id);
-    setAppState("unlocked");
+    // Check if approved immediately (in case they rejoin)
+    const myMemberRecord = currentMembers.find((m: any) => m.name === userName.trim());
+    if (myMemberRecord?.status === 'approved') {
+      localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
+      setFamilyId(data.id);
+      setAppState("unlocked");
+    } else {
+      setAppState("pending_approval");
+    }
   };
 
   const handleUnlock = async () => {
@@ -263,6 +356,40 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
           <button onClick={() => setAppState("unlocked")} className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 active:scale-95 text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-2 transition-transform transform-gpu shadow-md">
             Enter App <ArrowRight size={20} />
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // UI: Pending Approval
+  if (appState === "pending_approval") {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center p-4 text-center">
+        <AuthBackground />
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl w-full max-w-md rounded-[2rem] p-8 shadow-2xl border border-white/50 dark:border-gray-800 animate-in zoom-in-95 duration-300">
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center shadow-lg">
+              <Shield size={36} className="text-amber-500 animate-pulse" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-extrabold mb-2 text-gray-900 dark:text-white">Waiting for Approval</h1>
+          <p className="text-gray-500 mb-8 font-medium">Your request to join has been sent to the Vault Owner. Please ask them to approve you in their Settings page.</p>
+          
+          <div className="space-y-4">
+            <button 
+              onClick={checkApprovalStatus}
+              disabled={isLoading}
+              className="w-full bg-indigo-600 active:scale-95 text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-2 transition-all shadow-md"
+            >
+              {isLoading ? <Loader2 className="animate-spin" /> : <><CheckCircle size={20} /> I&apos;m Approved Now</>}
+            </button>
+            <button 
+              onClick={() => { localStorage.clear(); setAppState("unpaired"); }}
+              className="w-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+            >
+              Cancel & Start Over
+            </button>
+          </div>
         </div>
       </div>
     );
