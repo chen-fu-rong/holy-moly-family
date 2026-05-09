@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home, Trash2, AlertTriangle, Edit2 } from "lucide-react";
 import Link from "next/link";
 import { useVaultStore } from "@/lib/store";
 import { triggerHaptic } from "@/lib/utils";
@@ -282,24 +282,37 @@ export default function Dashboard() {
             ) : (
               activeTransactions.map((tx: any) => (
                 <div key={tx.id} className="relative rounded-2xl overflow-hidden group shadow-sm">
-                  {/* Background Action: Delete */}
+                  {/* Background Action: Edit & Delete */}
                   {isOwner && (
-                    <div className="absolute inset-y-0 right-0 w-24 bg-rose-500 flex items-center justify-end pr-5">
-                      <Trash2 className="text-white" size={20} />
+                    <div className="absolute inset-y-0 right-0 w-32 flex items-center justify-end">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('light');
+                          window.dispatchEvent(new CustomEvent("open-add-modal", { detail: { transaction: tx } }));
+                        }}
+                        className="w-16 h-full bg-indigo-500 flex items-center justify-center transition-colors"
+                      >
+                        <Edit2 className="text-white" size={20} />
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('medium');
+                          setConfirmDelete(tx.id);
+                        }}
+                        className="w-16 h-full bg-rose-500 flex items-center justify-center transition-colors"
+                      >
+                        <Trash2 className="text-white" size={20} />
+                      </button>
                     </div>
                   )}
 
                   {/* Swipeable Foreground Card */}
                   <motion.div
                     drag={isOwner ? "x" : false}
-                    dragConstraints={{ left: -80, right: 0 }}
+                    dragConstraints={{ left: -128, right: 0 }}
                     dragElastic={0.1}
-                    onDragEnd={(e, { offset }) => {
-                      if (offset.x < -50 && isOwner) {
-                        triggerHaptic('medium');
-                        setConfirmDelete(tx.id);
-                      }
-                    }}
                     className="relative z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between transform-gpu active:scale-[0.98] transition-transform"
                   >
                     <div className="flex items-center gap-4">

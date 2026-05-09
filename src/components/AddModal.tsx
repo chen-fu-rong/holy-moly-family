@@ -10,9 +10,10 @@ import { toast } from "sonner";
 interface AddModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialData?: any;
 }
 
-export default function AddModal({ isOpen, onClose }: AddModalProps) {
+export default function AddModal({ isOpen, onClose, initialData }: AddModalProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   // Form States
@@ -22,11 +23,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
   const [account, setAccount] = useState("");
   const [notes, setNotes] = useState("");
   const [isBusiness, setIsBusiness] = useState(false);
-  const [date, setDate] = useState(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
-  });
+  const [date, setDate] = useState("");
 
   // Data Lists
   const [expenseCats, setExpenseCats] = useState<string[]>([]);
@@ -54,18 +51,29 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
 
   useEffect(() => {
     if (isOpen) {
-      fetchDropdownData();
-      // Reset form when opened
-      setAmount("");
-      setNotes("");
-      setIsBusiness(false); 
-      setDate(() => {
+      if (initialData) {
+        setType(initialData.type);
+        setAmount(initialData.amount.toString());
+        setCategory(initialData.category);
+        setAccount(initialData.account);
+        setNotes(initialData.notes || "");
+        setIsBusiness(initialData.is_business_overhead);
+        const d = new Date(initialData.transaction_date);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        setDate(d.toISOString().slice(0, 16));
+      } else {
+        setType("expense");
+        setAmount("");
+        setCategory("");
+        setAccount("");
+        setNotes("");
+        setIsBusiness(false);
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        return now.toISOString().slice(0, 16);
-      });
+        setDate(now.toISOString().slice(0, 16));
+      }
     }
-  }, [isOpen, family]);
+  }, [isOpen, initialData]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -188,14 +196,21 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
       category: category || (type === 'expense' ? 'General Expense' : 'General Income'),
       type: type,
       is_business_overhead: isBusiness,
-      spender: myName,
+      spender: initialData ? initialData.spender : myName,
       account: account || availableAccounts[0] || 'Cash',
       notes: notes,
       transaction_date: new Date(date).toISOString(),
       family_id: familyId,
     };
 
-    const { error } = await useVaultStore.getState().addTransaction(payload);
+    let error;
+    if (initialData) {
+      const res = await useVaultStore.getState().editTransaction(initialData.id, payload);
+      error = res.error;
+    } else {
+      const res = await useVaultStore.getState().addTransaction(payload);
+      error = res.error;
+    }
 
     setIsSaving(false);
 
@@ -203,6 +218,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
       toast.error("Failed to save transaction.");
       console.error(error);
     } else {
+      toast.success(initialData ? "Transaction updated." : "Transaction saved.");
       // Broadcast to the rest of the app to update balances instantly
       window.dispatchEvent(new Event("transaction-updated"));
       onClose();
@@ -224,8 +240,10 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
         
         {/* Header */}
         <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex justify-between items-center z-20">
-          <h2 id="addModalTitle" className="text-xl font-extrabold text-gray-900 dark:text-white">New Record</h2>
-          <button type="button" onClick={onClose} aria-label="Close new record modal" className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:text-gray-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 transition-transform">
+          <h2 id="addModalTitle" className="text-xl font-extrabold text-gray-900 dark:text-white">
+            {initialData ? "Edit Record" : "New Record"}
+          </h2>
+          <button type="button" onClick={onClose} aria-label="Close modal" className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:text-gray-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 transition-transform">
             <X size={20} />
           </button>
         </div>

@@ -54,6 +54,8 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
   const fetchVaultData = useVaultStore(state => state.fetchVaultData);
   const setOwner = useVaultStore(state => state.setOwner);
 
+  const [editData, setEditData] = useState<any>(null);
+
   useEffect(() => {
     // 1. Check if device is already paired to a vault
     const savedFamilyId = localStorage.getItem("family_id");
@@ -70,26 +72,38 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       
       // Check approval status first
       const verifyAccess = async () => {
-        const { data } = await supabase
-          .from('families')
-          .select('members')
-          .eq('id', savedFamilyId)
-          .single();
-        
-        if (data?.members) {
-          const myRecord = data.members.find((m: any) => m.name === savedName);
-          if (myRecord?.status === 'approved') {
+        try {
+          const { data, error } = await supabase
+            .from('families')
+            .select('*')
+            .eq('id', savedFamilyId)
+            .single();
+          
+          const members = Array.isArray(data?.members) ? data.members : [];
+          
+          if (!error && members.length > 0) {
+            const myRecord = members.find((m: any) => m.name === savedName);
+            if (myRecord?.status === 'approved') {
+              if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
+                setAppState("unlocked");
+                fetchVaultData(savedFamilyId);
+              } else {
+                setAppState("locked");
+              }
+            } else {
+              setAppState("pending_approval");
+            }
+          } else {
+            // If members column is missing or table error, handle gracefully
             if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
               setAppState("unlocked");
               fetchVaultData(savedFamilyId);
             } else {
               setAppState("locked");
             }
-          } else {
-            setAppState("pending_approval");
           }
-        } else {
-          // If no members field exists yet, assume legacy vault and let them in
+        } catch (e) {
+          console.warn("Supabase access verification failed, assuming legacy vault.");
           if (unlockedUntil && parseInt(unlockedUntil) > Date.now()) {
             setAppState("unlocked");
             fetchVaultData(savedFamilyId);
@@ -114,15 +128,26 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
         })
         .subscribe();
 
-      return () => { supabase.removeChannel(channel); };
+      // Store channel locally for cleanup
+      (window as any).__supabaseChannel = channel;
     } else {
       setAppState("unpaired");
     }
 
-    // 2. Setup Global Add Modal Listener
-    const handleOpenModal = () => setIsModalOpen(true);
+    // 2. Setup Global Modal Listeners
+    const handleOpenModal = (e: any) => {
+      setEditData(e.detail?.transaction || null);
+      setIsModalOpen(true);
+    };
+    
     window.addEventListener("open-add-modal", handleOpenModal);
-    return () => window.removeEventListener("open-add-modal", handleOpenModal);
+    
+    return () => {
+      if ((window as any).__supabaseChannel) {
+        supabase.removeChannel((window as any).__supabaseChannel);
+      }
+      window.removeEventListener("open-add-modal", handleOpenModal);
+    };
   }, [fetchVaultData, setOwner]);
 
   // Handle Lockout Timer
@@ -156,13 +181,20 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
 
     const code = generatePairingCode();
     
+    // Default starter data
+    const defaultExpenses = ['Groceries', 'Transport', 'Utilities', 'Dining Out', 'Shopping'];
+    const defaultIncomes = ['Salary', 'Business', 'Freelance'];
+    const defaultBudgets = { 'Groceries': 0, 'Transport': 0, 'Utilities': 0, 'Dining Out': 0, 'Shopping': 0 };
+
     const { data, error } = await supabase
       .from('families')
       .insert([{ 
         family_name: vaultName, 
         pairing_code: code, 
         vault_pin: pinInput,
-        members: [{ name: userName.trim(), status: 'approved' }]
+        expense_categories: defaultExpenses,
+        income_categories: defaultIncomes,
+        budget_limits: defaultBudgets
       }])
       .select()
       .single();
@@ -170,13 +202,12 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     setIsLoading(false);
 
     if (error) {
-      toast.error("Failed to create vault. Check connection.");
-      console.error(error);
+      toast.error(`Failed to create vault: ${error.message || "Unknown error"}`);
+      console.error("Create Vault Error:", error);
       return;
     }
 
     localStorage.setItem("family_id", data.id);
-    // Add this line inside handleCreateVault:
     localStorage.setItem("is_vault_owner", "true");
     localStorage.setItem("my_name", userName.trim());
     localStorage.setItem("my_setup_complete", "true");
@@ -200,8 +231,10 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       .single();
     setIsLoading(false);
 
-    if (data?.members) {
-      const myRecord = data.members.find((m: any) => m.name === savedName);
+    const members = Array.isArray(data?.members) ? data.members : [];
+
+    if (members.length > 0) {
+      const myRecord = members.find((m: any) => m.name === savedName);
       if (myRecord?.status === 'approved') {
         localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
         setAppState("unlocked");
@@ -230,8 +263,16 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     }
 
     // Add member to pending list
-    const currentMembers = data.members || [];
-    const isAlreadyMember = currentMembers.some((m: any) => m.name === userName.trim());
+    const currentMembers = Array.isArray(data.members) ? data.members : [];
+    let isAlreadyMember = false;
+    if (currentMembers.length > 0) {
+      for (const m of currentMembers) {
+        if (m && m.name === userName.trim()) {
+          isAlreadyMember = true;
+          break;
+        }
+      }
+    }
     
     if (!isAlreadyMember) {
       const updatedMembers = [...currentMembers, { name: userName.trim(), status: 'pending' }];
@@ -260,24 +301,11 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     if (lockoutTime) return;
     setIsLoading(true);
 
-    const code = generatePairingCode();
-    
-    // Define the perfect starter kit
-    const defaultExpenses = ['Groceries', 'Transport', 'Utilities', 'Dining Out', 'Shopping'];
-    const defaultIncomes = ['Salary', 'Business', 'Freelance'];
-    const defaultBudgets = { 'Groceries': 0, 'Transport': 0, 'Utilities': 0, 'Dining Out': 0, 'Shopping': 0 };
-
     const { data, error } = await supabase
       .from('families')
-      .insert([{ 
-        family_name: vaultName, 
-        pairing_code: code, 
-        vault_pin: pinInput,
-        expense_categories: defaultExpenses,
-        income_categories: defaultIncomes,
-        budget_limits: defaultBudgets
-      }])
-      .select()
+      .select('*')
+      .eq('id', familyId)
+      .eq('vault_pin', pinInput)
       .single();
 
     setIsLoading(false);
@@ -288,6 +316,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       setPinInput("");
       localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
       setAppState("unlocked");
+      fetchVaultData(familyId!);
     } else {
       const newFailedAttempts = failedAttempts + 1;
       setFailedAttempts(newFailedAttempts);
@@ -299,6 +328,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       }
 
       localStorage.setItem("pin_failed_attempts", newFailedAttempts.toString());
+      toast.error("Incorrect PIN.");
     }
   };
 
@@ -495,8 +525,8 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
       {/* BottomNav moved OUTSIDE the transform wrapper so it stays fixed to the viewport */}
       <BottomNav />
       
-      {/* Global Add Modal handles all '+' button clicks */}
-      <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Global Add Modal handles all '+' button clicks and edits */}
+      <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} initialData={editData} />
     </Providers>
   );
 }

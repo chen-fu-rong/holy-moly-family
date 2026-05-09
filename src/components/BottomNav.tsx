@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Wallet, Plus, HandCoins, PieChart, type LucideIcon } from "lucide-react";
+import { Home, Wallet, Plus, HandCoins, PieChart, Bot, type LucideIcon } from "lucide-react";
 import { triggerHaptic } from "@/lib/utils";
 
 export default function BottomNav() {
@@ -62,14 +62,22 @@ export default function BottomNav() {
           </div>
 
           {/* Center Floating Action Button (+) */}
-          <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-20">
+          <div className="absolute left-1/2 -translate-x-1/2 -top-7 z-20 flex items-center justify-center gap-3">
+            <Link 
+              href="/ai"
+              onClick={() => triggerHaptic('light')}
+              className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 p-3 rounded-full shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all duration-300 transform-gpu active:scale-95"
+            >
+              <Bot size={22} strokeWidth={2.5} />
+            </Link>
             <button 
               onClick={(e) => {
                 e.preventDefault();
-                // THIS triggers the AddModal globally!
-                window.dispatchEvent(new Event("open-add-modal"));
+                triggerHaptic('medium');
+                // THIS triggers the AddModal globally without initialData (meaning "New Record")
+                window.dispatchEvent(new CustomEvent("open-add-modal", { detail: { transaction: null } }));
               }}
-              className="bg-gradient-to-tr from-indigo-600 to-fuchsia-500 text-white p-3.5 rounded-full shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] hover:scale-110 hover:shadow-[0_20px_40px_-5px_rgba(79,70,229,0.7)] transition-all duration-300 transform-gpu active:scale-95"
+              className="bg-gradient-to-tr from-indigo-600 to-fuchsia-500 text-white p-4 rounded-full shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] hover:scale-110 hover:shadow-[0_20px_40px_-5px_rgba(79,70,229,0.7)] transition-all duration-300 transform-gpu active:scale-95"
             >
               <Plus size={28} strokeWidth={3} />
             </button>
@@ -91,12 +99,19 @@ export default function BottomNav() {
             // Desktop Action Button
             if (item.isAction) {
               return (
-                <div key={item.name} className="my-2">
+                <div key={item.name} className="my-2 flex flex-col gap-3">
+                  <Link 
+                    href="/ai"
+                    onClick={() => triggerHaptic('light')}
+                    className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 p-3 rounded-full shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all duration-300 transform-gpu active:scale-95"
+                  >
+                    <Bot size={20} strokeWidth={2.5} />
+                  </Link>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
-                      // THIS triggers the AddModal globally!
-                      window.dispatchEvent(new Event("open-add-modal"));
+                      triggerHaptic('medium');
+                      window.dispatchEvent(new CustomEvent("open-add-modal", { detail: { transaction: null } }));
                     }}
                     className="bg-gradient-to-tr from-indigo-600 to-fuchsia-500 text-white p-3.5 rounded-full shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] hover:scale-110 transition-all duration-300 transform-gpu active:scale-95"
                   >

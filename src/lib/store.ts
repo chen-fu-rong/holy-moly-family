@@ -20,6 +20,7 @@ interface VaultState {
   deleteSavingsGoal: (id: string) => Promise<void>;
   deleteLoan: (id: string) => Promise<void>;
   addTransaction: (payload: any) => Promise<{ error: any }>;
+  editTransaction: (id: string, payload: any) => Promise<{ error: any }>;
   addLoan: (payload: any) => Promise<{ error: any }>;
   addSavingsGoal: (payload: any) => Promise<{ error: any }>;
   settleLoan: (id: string) => Promise<void>;
@@ -107,6 +108,18 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         transactions: [data[0], ...state.transactions].sort((a, b) => 
           new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
         ).slice(0, 500)
+      }));
+    }
+    return { error };
+  },
+
+  editTransaction: async (id: string, payload: any) => {
+    const { data, error } = await supabase.from('transactions').update(payload).eq('id', id).select();
+    if (!error && data) {
+      set(state => ({
+        transactions: state.transactions.map(t => t.id === id ? data[0] : t).sort((a, b) => 
+          new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+        )
       }));
     }
     return { error };
