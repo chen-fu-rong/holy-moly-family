@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Loader2, Save, Trash2, Plus, Wallet, Tags, AlertTriangle, ShieldCheck, Target, Calculator, Home, Briefcase, Key, Copy, Check, Users, Download, Database, CheckCircle2 } from "lucide-react";
 import { exportToCSV, triggerHaptic } from "@/lib/utils";
 import { useVaultStore } from "@/lib/store";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -86,14 +87,14 @@ export default function SettingsPage() {
 
         if (error) {
           console.error('Error fetching settings:', error);
-          alert(`Failed to load settings: ${error.message}`);
+          toast.error(`Failed to load settings: ${error.message}`);
         } else if (data) {
           // Family Data (Using ?? [] so it respects if you intentionally delete everything)
           setExpectedIncome(data.expected_monthly_income ? Number(data.expected_monthly_income) : 0);
         }
       } catch (err) {
         console.error('Unexpected error fetching settings:', err);
-        alert('Unexpected error loading settings');
+        toast.error('Unexpected error loading settings');
       }
     }
     setIsLoading(false);
@@ -125,13 +126,13 @@ export default function SettingsPage() {
 
         if (error) {
           console.error('Error saving settings:', error);
-          alert(`Failed to sync settings to the cloud: ${error.message}`);
+          toast.error(`Failed to sync settings to the cloud: ${error.message}`);
         } else {
           console.log('Settings saved successfully');
         }
       } catch (err) {
         console.error('Unexpected error saving settings:', err);
-        alert('Unexpected error saving settings');
+        toast.error('Unexpected error saving settings');
       }
     }
     

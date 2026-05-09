@@ -51,7 +51,7 @@ export default function BottomNav() {
     <>
       {/* Mobile Floating Glass Dock */}
       <nav 
-        className="md:hidden fixed left-4 right-4 z-40 transition-all duration-300 transform-gpu"
+        className="md:hidden fixed left-4 right-4 z-[45] transition-all duration-300 transform-gpu"
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
       >
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-white/50 dark:border-gray-800 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] rounded-[2rem] px-2 py-2 flex justify-between items-center relative">

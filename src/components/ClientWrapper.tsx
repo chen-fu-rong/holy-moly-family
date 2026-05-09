@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Lock, AlertTriangle, Shield, Key, Users, ArrowRight, Loader2, CheckCircle, RefreshCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useVaultStore } from '@/lib/store';
+import { toast } from 'sonner';
 
 type AppState = "loading" | "unpaired" | "create_vault" | "join_vault" | "show_code" | "pending_approval" | "locked" | "unlocked";
 
@@ -150,7 +151,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
   };
 
   const handleCreateVault = async () => {
-    if (!userName.trim() || pinInput.length < 4) return alert("Enter your name and a 4+ digit PIN.");
+    if (!userName.trim() || pinInput.length < 4) return toast.error("Enter your name and a 4+ digit PIN.");
     setIsLoading(true);
 
     const code = generatePairingCode();
@@ -169,7 +170,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     setIsLoading(false);
 
     if (error) {
-      alert("Failed to create vault. Check connection.");
+      toast.error("Failed to create vault. Check connection.");
       console.error(error);
       return;
     }
@@ -205,13 +206,13 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
         localStorage.setItem("vault_unlocked_until", (Date.now() + 604800000).toString());
         setAppState("unlocked");
       } else {
-        alert("Still waiting for approval.");
+        toast.info("Still waiting for approval.");
       }
     }
   };
 
   const handleJoinVault = async () => {
-    if (!userName.trim() || !pairingCodeInput || !pinInput) return alert("Fill in all fields.");
+    if (!userName.trim() || !pairingCodeInput || !pinInput) return toast.error("Fill in all fields.");
     setIsLoading(true);
 
     const { data, error } = await supabase
@@ -224,7 +225,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     setIsLoading(false);
 
     if (error || !data) {
-      alert("Invalid Pairing Code or PIN.");
+      toast.error("Invalid Pairing Code or PIN.");
       return;
     }
 
@@ -482,10 +483,10 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
         <div className="fixed inset-0 z-[100] pointer-events-none bg-white/10 dark:bg-white/5 animate-in fade-in duration-75 mix-blend-overlay" />
       )}
       
-      <div className={`flex min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent] transition-transform duration-75 ${isVisualFeedback ? 'scale-[0.995]' : 'scale-100'}`}>
+      <div className={`flex flex-col md:flex-row min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent] transition-transform duration-75 ${isVisualFeedback ? 'scale-[0.995]' : 'scale-100'}`}>
         <BottomNav />
         {/* TopBar completely removed to reclaim screen real estate */}
-        <div className="flex-1 flex flex-col md:ml-24 min-w-0 min-h-[100dvh] bg-transparent">
+        <div className="flex-1 flex flex-col min-w-0 min-h-[100dvh] bg-transparent">
           <main className="flex-1 w-full">
             {children}
           </main>

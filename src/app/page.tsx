@@ -6,6 +6,7 @@ import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, H
 import Link from "next/link";
 import { useVaultStore } from "@/lib/store";
 import { triggerHaptic } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
   const isOwner = useVaultStore(state => state.isOwner);
@@ -205,8 +206,23 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Dynamic Balance Card */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Dynamic Balance Card - Swipeable */}
+        <motion.div 
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(e, { offset, velocity }) => {
+            const swipe = offset.x;
+            if (swipe < -50) {
+              setWorkspace("business");
+              triggerHaptic('medium');
+            } else if (swipe > 50) {
+              setWorkspace("personal");
+              triggerHaptic('medium');
+            }
+          }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
           <div className={`col-span-2 md:col-span-2 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden transform-gpu transition-colors duration-700 ${isBusiness ? 'bg-gradient-to-br from-emerald-600 to-cyan-700' : 'bg-gradient-to-br from-indigo-600 to-fuchsia-700'}`}>
             <div className="relative z-10">
               <p className="text-white/80 font-bold text-sm flex items-center gap-2 mb-1 uppercase tracking-wider">
@@ -251,7 +267,7 @@ export default function Dashboard() {
               <p className="text-lg font-extrabold text-gray-900 dark:text-white">-{activeExpense.toLocaleString()}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filtered Activity List */}
         <div className="space-y-4 pt-4">
@@ -265,45 +281,54 @@ export default function Dashboard() {
               <p className="text-center text-gray-500 text-sm py-4 font-medium">No activity in this workspace yet.</p>
             ) : (
               activeTransactions.map((tx: any) => (
-                <div key={tx.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm transform-gpu transition-all active:scale-[0.98] animate-in fade-in zoom-in-95 duration-200 group">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${tx.type === 'income' ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100/80 dark:bg-rose-900/30 text-rose-600'}`}>
-                      {tx.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                <div key={tx.id} className="relative rounded-2xl overflow-hidden group shadow-sm">
+                  {/* Background Action: Delete */}
+                  {isOwner && (
+                    <div className="absolute inset-y-0 right-0 w-24 bg-rose-500 flex items-center justify-end pr-5">
+                      <Trash2 className="text-white" size={20} />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white text-sm">{tx.category}</h4>
-                      <p className="text-[11px] text-gray-500 font-medium">
-                        {tx.account || 'Cash'} • {tx.spender}
-                      </p>
-                      {tx.notes && (
-                        <p className="text-[10px] text-gray-400 italic mt-0.5 line-clamp-1 max-w-[150px]">
-                          {tx.notes}
+                  )}
+
+                  {/* Swipeable Foreground Card */}
+                  <motion.div
+                    drag={isOwner ? "x" : false}
+                    dragConstraints={{ left: -80, right: 0 }}
+                    dragElastic={0.1}
+                    onDragEnd={(e, { offset }) => {
+                      if (offset.x < -50 && isOwner) {
+                        triggerHaptic('medium');
+                        setConfirmDelete(tx.id);
+                      }
+                    }}
+                    className="relative z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between transform-gpu active:scale-[0.98] transition-transform"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-xl ${tx.type === 'income' ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100/80 dark:bg-rose-900/30 text-rose-600'}`}>
+                        {tx.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">{tx.category}</h4>
+                        <p className="text-[11px] text-gray-500 font-medium">
+                          {tx.account || 'Cash'} • {tx.spender}
                         </p>
-                      )}
+                        {tx.notes && (
+                          <p className="text-[10px] text-gray-400 italic mt-0.5 line-clamp-1 max-w-[150px]">
+                            {tx.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className={`font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
-                        {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()} {currency}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">
-                        {new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className={`font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                          {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()} {currency}
+                        </p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">
+                          {new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
                     </div>
-                    {isOwner && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerHaptic('medium');
-                          setConfirmDelete(tx.id);
-                        }}
-                        className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
+                  </motion.div>
                 </div>
               ))
             )}

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { X, Loader2, ArrowUpRight, ArrowDownRight, Briefcase, Calendar, AlignLeft, Tags, Wallet, AlertTriangle } from "lucide-react";
 import { triggerHaptic } from "@/lib/utils";
 import { useVaultStore } from "@/lib/store";
+import { toast } from "sonner";
 
 interface AddModalProps {
   isOpen: boolean;
@@ -152,7 +153,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
   }, [type, isBusiness, expenseCats, incomeCats, bizExpenseCats, bizIncomeCats]);
 
   const handleSave = async () => {
-    if (!amount || isNaN(Number(amount))) return alert("Please enter a valid amount.");
+    if (!amount || isNaN(Number(amount))) return toast.error("Please enter a valid amount.");
 
     // Budget Check for Expenses
     if (type === 'expense' && !isBusiness) {
@@ -170,9 +171,9 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
         
         if (currentSpent + Number(amount) > limit) {
           triggerHaptic('warning');
-          if (!confirm(`Warning: This will put you ${ (currentSpent + Number(amount) - limit).toLocaleString() } ${currency} over your budget for ${category}. Continue?`)) {
-            return;
-          }
+          // For now we'll use a toast warning and return. Implementing a full custom bottom sheet 
+          // confirm here would take a bit more component restructuring, but a toast is cleaner than a native confirm!
+          toast.warning(`Warning: This will put you ${ (currentSpent + Number(amount) - limit).toLocaleString() } ${currency} over your budget for ${category}.`);
         }
       }
     }
@@ -199,7 +200,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
     setIsSaving(false);
 
     if (error) {
-      alert("Failed to save transaction.");
+      toast.error("Failed to save transaction.");
       console.error(error);
     } else {
       // Broadcast to the rest of the app to update balances instantly
