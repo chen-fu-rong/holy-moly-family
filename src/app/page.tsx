@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home, Trash2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useVaultStore } from "@/lib/store";
 
 export default function Dashboard() {
   const isOwner = useVaultStore(state => state.isOwner);
   const transactions = useVaultStore(state => state.transactions);
+  const deleteTransaction = useVaultStore(state => state.deleteTransaction);
   const loans = useVaultStore(state => state.loans);
   const currency = useVaultStore(state => state.currency);
   const isSyncing = useVaultStore(state => state.isLoading);
@@ -16,6 +17,7 @@ export default function Dashboard() {
   
   // Workspace State
   const [workspace, setWorkspace] = useState<"personal" | "business">("personal");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     setMyName(localStorage.getItem("my_name") || "Me");
@@ -67,6 +69,11 @@ export default function Dashboard() {
   const handleTouchMove = (e: React.TouchEvent) => { if (startY > 0 && e.touches[0].clientY - startY > 70) setIsPulling(true); };
   const handleTouchEnd = () => { if (isPulling) { fetchData(); setStartY(0); } };
 
+  const handleDelete = async (id: string) => {
+    await deleteTransaction(id);
+    setConfirmDelete(null);
+  };
+
   // Determine Active Workspace Variables
   const isBusiness = workspace === "business";
   const activeBalance = isBusiness ? stats.businessProfit : stats.personalBalance;
@@ -94,6 +101,27 @@ export default function Dashboard() {
       className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] [-webkit-tap-highlight-color:transparent] transition-colors duration-500"
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
     >
+      {/* 2026 Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600">
+                <AlertTriangle size={32} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">Delete Transaction?</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">This action cannot be undone. Are you sure?</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white active:scale-95 transition-transform">Cancel</button>
+              <button onClick={() => handleDelete(confirmDelete)} className="flex-1 py-3 font-bold rounded-xl bg-rose-600 text-white active:scale-95 transition-transform">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Workspace Background */}
       <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu transition-colors duration-700">
         <div className={`absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full blur-3xl animate-pulse transition-colors duration-700 ${isBusiness ? 'bg-emerald-400/10 dark:bg-emerald-500/10' : 'bg-indigo-400/10 dark:bg-indigo-500/10'}`} style={{ animationDuration: '6s' }} />
@@ -194,7 +222,7 @@ export default function Dashboard() {
               <p className="text-center text-gray-500 text-sm py-4 font-medium">No activity in this workspace yet.</p>
             ) : (
               activeTransactions.map((tx: any) => (
-                <div key={tx.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm transform-gpu transition-transform active:scale-95 animate-in fade-in zoom-in-95 duration-200">
+                <div key={tx.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm transform-gpu transition-all active:scale-[0.98] animate-in fade-in zoom-in-95 duration-200 group">
                   <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-xl ${tx.type === 'income' ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100/80 dark:bg-rose-900/30 text-rose-600'}`}>
                       {tx.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
@@ -204,15 +232,33 @@ export default function Dashboard() {
                       <p className="text-[11px] text-gray-500 font-medium">
                         {tx.account || 'Cash'} • {tx.spender}
                       </p>
+                      {tx.notes && (
+                        <p className="text-[10px] text-gray-400 italic mt-0.5 line-clamp-1 max-w-[150px]">
+                          {tx.notes}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
-                      {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()} {currency}
-                    </p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">
-                      {new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className={`font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                        {tx.type === 'income' ? '+' : '-'}{Number(tx.amount).toLocaleString()} {currency}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">
+                        {new Date(tx.transaction_date || tx.date || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    {isOwner && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDelete(tx.id);
+                        }}
+                        className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

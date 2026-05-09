@@ -194,7 +194,7 @@ export default function AddModal({ isOpen, onClose }: AddModalProps) {
       family_id: familyId,
     };
 
-    const { error } = await supabase.from('transactions').insert([payload]);
+    const { error } = await useVaultStore.getState().addTransaction(payload);
 
     setIsSaving(false);
 

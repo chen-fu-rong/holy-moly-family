@@ -77,7 +77,7 @@ export default function LoansPage() {
       transaction_date: new Date(datetime).toISOString()
     };
 
-    const { error } = await supabase.from('loans').insert([payload]);
+    const { error } = await useVaultStore.getState().addLoan(payload);
     setIsSaving(false);
 
     if (!error) {
@@ -91,9 +91,9 @@ export default function LoansPage() {
     if (!confirmDialog) return;
     
     if (confirmDialog.action === 'settle') {
-      await supabase.from('loans').update({ status: 'settled' }).eq('id', confirmDialog.id);
+      await useVaultStore.getState().settleLoan(confirmDialog.id);
     } else if (confirmDialog.action === 'delete') {
-      await supabase.from('loans').delete().eq('id', confirmDialog.id);
+      await useVaultStore.getState().deleteLoan(confirmDialog.id);
     }
     
     setConfirmDialog(null);

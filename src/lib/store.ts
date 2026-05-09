@@ -16,6 +16,14 @@ interface VaultState {
   syncTransactions: (familyId: string) => Promise<void>;
   syncLoans: (familyId: string) => Promise<void>;
   syncSavings: (familyId: string) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  deleteSavingsGoal: (id: string) => Promise<void>;
+  deleteLoan: (id: string) => Promise<void>;
+  addTransaction: (payload: any) => Promise<{ error: any }>;
+  addLoan: (payload: any) => Promise<{ error: any }>;
+  addSavingsGoal: (payload: any) => Promise<{ error: any }>;
+  settleLoan: (id: string) => Promise<void>;
+  updateSavingsProgress: (id: string, amount: number) => Promise<void>;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -63,5 +71,82 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   syncSavings: async (familyId: string) => {
     const { data } = await supabase.from('savings_goals').select('*').eq('family_id', familyId).order('created_at', { ascending: false });
     set({ savingsGoals: data || [] });
+  },
+
+  deleteTransaction: async (id: string) => {
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (!error) {
+      set(state => ({
+        transactions: state.transactions.filter(t => t.id !== id)
+      }));
+    }
+  },
+
+  deleteSavingsGoal: async (id: string) => {
+    const { error } = await supabase.from('savings_goals').delete().eq('id', id);
+    if (!error) {
+      set(state => ({
+        savingsGoals: state.savingsGoals.filter(s => s.id !== id)
+      }));
+    }
+  },
+
+  deleteLoan: async (id: string) => {
+    const { error } = await supabase.from('loans').delete().eq('id', id);
+    if (!error) {
+      set(state => ({
+        loans: state.loans.filter(l => l.id !== id)
+      }));
+    }
+  },
+
+  addTransaction: async (payload: any) => {
+    const { data, error } = await supabase.from('transactions').insert([payload]).select();
+    if (!error && data) {
+      set(state => ({
+        transactions: [data[0], ...state.transactions].sort((a, b) => 
+          new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+        ).slice(0, 500)
+      }));
+    }
+    return { error };
+  },
+
+  addLoan: async (payload: any) => {
+    const { data, error } = await supabase.from('loans').insert([payload]).select();
+    if (!error && data) {
+      set(state => ({
+        loans: [data[0], ...state.loans]
+      }));
+    }
+    return { error };
+  },
+
+  addSavingsGoal: async (payload: any) => {
+    const { data, error } = await supabase.from('savings_goals').insert([payload]).select();
+    if (!error && data) {
+      set(state => ({
+        savingsGoals: [data[0], ...state.savingsGoals]
+      }));
+    }
+    return { error };
+  },
+
+  settleLoan: async (id: string) => {
+    const { error } = await supabase.from('loans').update({ status: 'settled' }).eq('id', id);
+    if (!error) {
+      set(state => ({
+        loans: state.loans.map(l => l.id === id ? { ...l, status: 'settled' } : l)
+      }));
+    }
+  },
+
+  updateSavingsProgress: async (id: string, amount: number) => {
+    const { error } = await supabase.from('savings_goals').update({ current_amount: amount }).eq('id', id);
+    if (!error) {
+      set(state => ({
+        savingsGoals: state.savingsGoals.map(s => s.id === id ? { ...s, current_amount: amount } : s)
+      }));
+    }
   }
 }));
