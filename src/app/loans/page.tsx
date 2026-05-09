@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, ArrowUpRight, ArrowDownRight, CheckCircle2, User, AlignLeft, CalendarClock, Percent, Trash2, AlertTriangle, TrendingUp } from "lucide-react";
 import { useVaultStore } from "@/lib/store";
+import { triggerHaptic } from "@/lib/utils";
 
 export default function LoansPage() {
   const currency = useVaultStore(state => state.currency);
@@ -81,6 +82,7 @@ export default function LoansPage() {
     setIsSaving(false);
 
     if (!error) {
+      triggerHaptic('success');
       setShowAddForm(false);
       setCounterparty(""); setAmount(""); setNotes(""); setHasInterest(false); setInterestRate("");
       fetchLoans();
@@ -91,8 +93,10 @@ export default function LoansPage() {
     if (!confirmDialog) return;
     
     if (confirmDialog.action === 'settle') {
+      triggerHaptic('medium');
       await useVaultStore.getState().settleLoan(confirmDialog.id);
     } else if (confirmDialog.action === 'delete') {
+      triggerHaptic('heavy');
       await useVaultStore.getState().deleteLoan(confirmDialog.id);
     }
     

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Plus, Target, TrendingUp, CheckCircle2, PiggyBank, Calendar, ArrowRight, Trash2, AlertTriangle } from "lucide-react";
 import { useVaultStore } from "@/lib/store";
+import { triggerHaptic } from "@/lib/utils";
 
 export default function SavingsPage() {
   const isOwner = useVaultStore(state => state.isOwner);
@@ -56,6 +57,7 @@ export default function SavingsPage() {
     setIsSaving(false);
 
     if (!error) {
+      triggerHaptic('success');
       setShowAddForm(false);
       setName(""); setTargetAmount(""); setTargetDate("");
       fetchGoals();
@@ -72,6 +74,7 @@ export default function SavingsPage() {
     
     setDepositGoalId(null);
     setDepositAmount("");
+    triggerHaptic('medium');
     fetchGoals();
   };
 
@@ -80,6 +83,7 @@ export default function SavingsPage() {
     await deleteSavingsGoal(id);
     setIsSaving(false);
     setConfirmDelete(null);
+    triggerHaptic('heavy');
     fetchGoals();
   };
 

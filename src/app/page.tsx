@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home, Trash2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useVaultStore } from "@/lib/store";
+import { triggerHaptic } from "@/lib/utils";
 
 export default function Dashboard() {
   const isOwner = useVaultStore(state => state.isOwner);
@@ -115,8 +116,24 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex gap-3 mt-8">
-              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 font-bold rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white active:scale-95 transition-transform">Cancel</button>
-              <button onClick={() => handleDelete(confirmDelete)} className="flex-1 py-3 font-bold rounded-xl bg-rose-600 text-white active:scale-95 transition-transform">Delete</button>
+              <button 
+                onClick={() => {
+                  setConfirmDelete(null);
+                  triggerHaptic('light');
+                }} 
+                className="flex-1 py-3 font-bold rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white active:scale-95 transition-transform"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  handleDelete(confirmDelete!);
+                  triggerHaptic('heavy');
+                }} 
+                className="flex-1 py-3 font-bold rounded-xl bg-rose-600 text-white active:scale-95 transition-transform"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -136,20 +153,35 @@ export default function Dashboard() {
       <div className="px-4 md:px-8 max-w-4xl mx-auto pt-2 space-y-6">
         
         {/* Header & Workspace Toggle */}
-        {/* Header & Workspace Toggle */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex bg-gray-200/50 dark:bg-gray-800/50 p-1 rounded-2xl w-48 shadow-inner">
-            <button onClick={() => setWorkspace("personal")} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${!isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>
+            <button 
+              onClick={() => {
+                setWorkspace("personal");
+                triggerHaptic('light');
+              }} 
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${!isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+            >
               <Home size={14} /> Family
             </button>
-            <button onClick={() => setWorkspace("business")} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>
+            <button 
+              onClick={() => {
+                setWorkspace("business");
+                triggerHaptic('light');
+              }} 
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${isBusiness ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+            >
               <Briefcase size={14} /> Business
             </button>
           </div>
           
           <div className="flex gap-2">
             {/* The New Savings Goal Button */}
-            <Link href="/savings" className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-amber-200 dark:border-amber-900/30 rounded-2xl shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-amber-600 dark:text-amber-500 active:scale-95">
+            <Link 
+              href="/savings" 
+              onClick={() => triggerHaptic('light')}
+              className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-amber-200 dark:border-amber-900/30 rounded-2xl shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-amber-600 dark:text-amber-500 active:scale-95"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.5-1 2-2h2v-4h-2.13c.09-.32.13-.65.13-1 0-2.8-2.2-5-5-5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
             </Link>
 
@@ -252,6 +284,7 @@ export default function Dashboard() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
+                          triggerHaptic('medium');
                           setConfirmDelete(tx.id);
                         }}
                         className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
