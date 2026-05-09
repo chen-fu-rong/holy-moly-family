@@ -483,8 +483,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
         <div className="fixed inset-0 z-[100] pointer-events-none bg-white/10 dark:bg-white/5 animate-in fade-in duration-75 mix-blend-overlay" />
       )}
       
-      <div className={`flex flex-col md:flex-row min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent] transition-transform duration-75 ${isVisualFeedback ? 'scale-[0.995]' : 'scale-100'}`}>
-        <BottomNav />
+      <div className={`flex flex-col md:flex-row min-h-[100dvh] w-full [-webkit-tap-highlight-color:transparent] transition-transform duration-75 ${isVisualFeedback ? 'scale-[0.995]' : ''}`}>
         {/* TopBar completely removed to reclaim screen real estate */}
         <div className="flex-1 flex flex-col min-w-0 min-h-[100dvh] bg-transparent">
           <main className="flex-1 w-full">
@@ -492,6 +491,9 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
           </main>
         </div>
       </div>
+      
+      {/* BottomNav moved OUTSIDE the transform wrapper so it stays fixed to the viewport */}
+      <BottomNav />
       
       {/* Global Add Modal handles all '+' button clicks */}
       <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
