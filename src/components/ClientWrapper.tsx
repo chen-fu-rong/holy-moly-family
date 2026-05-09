@@ -10,9 +10,16 @@ import { useVaultStore } from '@/lib/store';
 
 type AppState = "loading" | "unpaired" | "create_vault" | "join_vault" | "show_code" | "pending_approval" | "locked" | "unlocked";
 
+// Helper for Auth Screen Backgrounds
+const AuthBackground = () => (
+  <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu">
+    <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-500/10 blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
+    <div className="absolute top-[20%] -right-[10%] w-[50%] h-[60%] rounded-full bg-fuchsia-400/20 dark:bg-fuchsia-500/10 blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+  </div>
+);
+
 export default function ClientWrapper({ children }: { children: React.ReactNode; }) {
   const [appState, setAppState] = useState<AppState>("loading");
-  // ... (keeping other states)
   const [isVisualFeedback, setIsVisualFeedback] = useState(false);
 
   useEffect(() => {
@@ -26,7 +33,6 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
     return () => window.removeEventListener('visual-haptic', handleVisualHaptic);
   }, []);
 
-  // ... rest of the existing code
   const [familyId, setFamilyId] = useState<string | null>(null);
   
   // Form States
