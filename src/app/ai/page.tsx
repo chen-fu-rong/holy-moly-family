@@ -183,19 +183,19 @@ Recent Transactions: ${JSON.stringify(expenses.map(t => ({ cat: t.category, amt:
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-2" />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-950 dark:via-gray-950 to-transparent pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="fixed bottom-0 left-0 right-0 p-4 z-50 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-950 dark:via-gray-950 to-transparent pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <form 
           onSubmit={handleFormSubmit}
-          className="max-w-4xl mx-auto relative flex items-center shadow-lg rounded-full overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 transition-all"
+          className="max-w-4xl mx-auto relative flex items-center shadow-2xl rounded-full overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 transition-all"
         >
           <input
             value={localInput}
             onChange={(e) => setLocalInput(e.target.value)}
             placeholder="Ask about your budget..."
-            className="w-full py-4 pl-6 pr-14 bg-transparent outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 font-medium"
+            className="w-full py-4 pl-6 pr-14 bg-transparent outline-none text-base md:text-sm text-gray-900 dark:text-white placeholder-gray-400 font-medium"
           />
           <button 
             type="submit" 
