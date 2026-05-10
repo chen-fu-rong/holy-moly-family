@@ -4,7 +4,7 @@ import Providers from './Providers';
 import BottomNav from './BottomNav';
 import AddModal from './AddModal';
 import { useEffect, useState } from 'react';
-import { Lock, AlertTriangle, Shield, Key, Users, ArrowRight, Loader2, CheckCircle, RefreshCcw } from 'lucide-react';
+import { Lock, AlertTriangle, Shield, Key, Users, ArrowRight, Loader2, CheckCircle, RefreshCcw, Copy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useVaultStore } from '@/lib/store';
 import { toast } from 'sonner';
@@ -394,8 +394,17 @@ export default function ClientWrapper({ children }: { children: React.ReactNode;
           <CheckCircle size={56} className="text-emerald-500 mx-auto mb-6 drop-shadow-md" />
           <h1 className="text-2xl font-extrabold mb-2 text-gray-900 dark:text-white">Vault Created!</h1>
           <p className="text-gray-500 mb-6 font-medium text-sm">Share this exact code with your partner to link their device.</p>
-          <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm py-6 rounded-2xl mb-8 border border-dashed border-gray-300 dark:border-gray-600">
+          <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm py-6 rounded-2xl mb-8 border border-dashed border-gray-300 dark:border-gray-600 relative group">
             <p className="text-4xl font-mono font-black text-indigo-600 tracking-[0.2em]">{generatedCode}</p>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(generatedCode);
+                toast.success("Code copied!");
+              }}
+              className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-700 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Copy size={16} className="text-gray-500" />
+            </button>
           </div>
           <button onClick={() => setAppState("unlocked")} className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 active:scale-95 text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-2 transition-transform transform-gpu shadow-md">
             Enter App <ArrowRight size={20} />

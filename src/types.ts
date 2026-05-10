@@ -19,4 +19,5 @@ export interface Loan {
   principal_amount: number;
   interest_rate: number;
   start_date: string;
+  status?: 'active' | 'paid' | 'pending' | string;
 }

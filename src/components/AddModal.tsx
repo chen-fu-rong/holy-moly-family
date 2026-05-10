@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { X, Loader2, ArrowUpRight, ArrowDownRight, Briefcase, Calendar, AlignLeft, Tags, Wallet, AlertTriangle } from "lucide-react";
 import { triggerHaptic } from "@/lib/utils";
 import { useVaultStore } from "@/lib/store";
+import { predictCategory } from "@/lib/insights";
 import { toast } from "sonner";
 
 interface AddModalProps {
@@ -24,6 +25,22 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
   const [notes, setNotes] = useState("");
   const [isBusiness, setIsBusiness] = useState(false);
   const [date, setDate] = useState("");
+
+  const transactions = useVaultStore(state => state.transactions);
+
+  // Auto-categorization Logic
+  useEffect(() => {
+    if (!initialData && notes.length > 2) {
+      const suggested = predictCategory(notes, transactions);
+      if (suggested) {
+        // Only set if current category is the default or empty
+        const allCats = [...expenseCats, ...incomeCats, ...bizExpenseCats, ...bizIncomeCats];
+        if (!category || category === expenseCats[0] || category === bizExpenseCats[0]) {
+          setCategory(suggested);
+        }
+      }
+    }
+  }, [notes, initialData, transactions]);
 
   // Data Lists
   const [expenseCats, setExpenseCats] = useState<string[]>([]);
@@ -75,6 +92,13 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
     }
   }, [isOpen, initialData]);
 
+  // Load dropdown data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchDropdownData();
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -113,13 +137,15 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
       setBizExpenseCats(beCats);
       setBizIncomeCats(biCats);
       setAvailableAccounts(fWallets);
-      setAccount(prev => prev || fWallets[0]);
+      if (!initialData) setAccount(prev => prev || fWallets[0]);
       
       // Set initial category
-      if (isBusiness) {
-        setCategory(type === 'expense' ? beCats[0] : biCats[0]);
-      } else {
-        setCategory(type === 'expense' ? eCats[0] : iCats[0]);
+      if (!initialData) {
+        if (isBusiness) {
+          setCategory(type === 'expense' ? beCats[0] : biCats[0]);
+        } else {
+          setCategory(type === 'expense' ? eCats[0] : iCats[0]);
+        }
       }
     } else if (familyId) {
       const { data, error } = await supabase
@@ -140,12 +166,14 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
         setBizExpenseCats(beCats);
         setBizIncomeCats(biCats);
         setAvailableAccounts(fWallets);
-        setAccount(prev => prev || fWallets[0]);
+        if (!initialData) setAccount(prev => prev || fWallets[0]);
         
-        if (isBusiness) {
-          setCategory(type === 'expense' ? beCats[0] : biCats[0]);
-        } else {
-          setCategory(type === 'expense' ? eCats[0] : iCats[0]);
+        if (!initialData) {
+          if (isBusiness) {
+            setCategory(type === 'expense' ? beCats[0] : biCats[0]);
+          } else {
+            setCategory(type === 'expense' ? eCats[0] : iCats[0]);
+          }
         }
       }
     }
@@ -153,6 +181,11 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
 
   // Update category dropdown if type or business toggle changes
   useEffect(() => {
+    // Prevent overriding if editing an existing record, unless the type/workspace changed manually AFTER opening
+    if (initialData && initialData.type === type && initialData.is_business_overhead === isBusiness) {
+      return;
+    }
+    
     if (isBusiness) {
       setCategory(type === 'expense' ? bizExpenseCats[0] : bizIncomeCats[0]);
     } else {
@@ -317,8 +350,8 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm font-bold text-gray-700 dark:text-gray-200 appearance-none"
               >
                 {(isBusiness 
-                  ? (type === 'expense' ? bizExpenseCats : bizIncomeCats)
-                  : (type === 'expense' ? expenseCats : incomeCats)
+                  ? (type === 'expense' ? (bizExpenseCats.length ? bizExpenseCats : ['General Expense']) : (bizIncomeCats.length ? bizIncomeCats : ['General Income']))
+                  : (type === 'expense' ? (expenseCats.length ? expenseCats : ['General Expense']) : (incomeCats.length ? incomeCats : ['General Income']))
                 ).map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
@@ -335,7 +368,7 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
                 onChange={e => setAccount(e.target.value)} 
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm font-bold text-gray-700 dark:text-gray-200 appearance-none"
               >
-                {availableAccounts.map(acc => (
+                {(availableAccounts.length ? availableAccounts : ['Cash']).map(acc => (
                   <option key={acc} value={acc}>{acc}</option>
                 ))}
               </select>

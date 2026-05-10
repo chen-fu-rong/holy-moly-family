@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useVaultStore } from "@/lib/store";
 import { triggerHaptic } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import FinanceInsights from "@/components/FinanceInsights";
 
 export default function Dashboard() {
   const isOwner = useVaultStore(state => state.isOwner);
@@ -197,12 +198,10 @@ export default function Dashboard() {
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.5-1 2-2h2v-4h-2.13c.09-.32.13-.65.13-1 0-2.8-2.2-5-5-5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
             </Link>
 
-            {/* Owner-Only Settings Button */}
-            {isOwner && (
-              <Link href="/settings" className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300 active:scale-95">
-                <Settings size={22} />
-              </Link>
-            )}
+            {/* Settings Button - Visible to all members */}
+            <Link href="/settings" className="p-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300 active:scale-95">
+              <Settings size={22} />
+            </Link>
           </div>
         </div>
 
@@ -268,6 +267,9 @@ export default function Dashboard() {
             </div>
           </div>
         </motion.div>
+
+        {/* Smart Insights Logic */}
+        {!isBusiness && <FinanceInsights />}
 
         {/* Filtered Activity List */}
         <div className="space-y-4 pt-4">

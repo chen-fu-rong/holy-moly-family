@@ -77,20 +77,30 @@ export default function SettingsPage() {
     setBusinessExpenseCats(savedBusinessExpenses ? JSON.parse(savedBusinessExpenses) : ["Software", "Marketing", "Contractors"]);
     setBusinessIncomeCats(savedBusinessIncomes ? JSON.parse(savedBusinessIncomes) : ["Client Invoices", "Product Sales"]);
 
+    const savedPairingCode = localStorage.getItem("vault_pairing_code");
+    if (savedPairingCode) setPairingCode(savedPairingCode);
+
     if (familyId) {
       try {
         const { data, error } = await supabase
           .from('families')
-          .select('expected_monthly_income')
+          .select('expected_monthly_income, pairing_code, members')
           .eq('id', familyId)
           .single();
 
         if (error) {
-          console.error('Error fetching settings:', error);
-          toast.error(`Failed to load settings: ${error.message}`);
+          if (error.code === 'PGRST116') {
+            console.warn('Vault not found in database. It might have been deleted.');
+            toast.error('Vault not found. You may need to disconnect and reconnect.');
+          } else {
+            console.error('Error fetching settings:', error);
+            toast.error(`Failed to load settings: ${error.message || 'Unknown error'}`);
+          }
         } else if (data) {
-          // Family Data (Using ?? [] so it respects if you intentionally delete everything)
           setExpectedIncome(data.expected_monthly_income ? Number(data.expected_monthly_income) : 0);
+          setPairingCode(data.pairing_code || "");
+          setMembers(Array.isArray(data.members) ? data.members : []);
+          if (data.pairing_code) localStorage.setItem("vault_pairing_code", data.pairing_code);
         }
       } catch (err) {
         console.error('Unexpected error fetching settings:', err);
@@ -106,21 +116,24 @@ export default function SettingsPage() {
     triggerHaptic('medium');
     const familyId = localStorage.getItem("family_id");
     
-    localStorage.setItem("custom_accounts", JSON.stringify(wallets));
-    localStorage.setItem("vault_currency", currency);
-    localStorage.setItem("family_expense_categories", JSON.stringify(familyExpenseCats));
-    localStorage.setItem("family_income_categories", JSON.stringify(familyIncomeCats));
-    localStorage.setItem("family_budget_limits", JSON.stringify(budgetLimits));
-    localStorage.setItem("business_expense_categories", JSON.stringify(businessExpenseCats));
-    localStorage.setItem("business_income_categories", JSON.stringify(businessIncomeCats));
-    window.dispatchEvent(new Event("settings-updated"));
+        if (isOwner) {
+          localStorage.setItem("custom_accounts", JSON.stringify(wallets));
+          localStorage.setItem("vault_currency", currency);
+          localStorage.setItem("family_expense_categories", JSON.stringify(familyExpenseCats));
+          localStorage.setItem("family_income_categories", JSON.stringify(familyIncomeCats));
+          localStorage.setItem("family_budget_limits", JSON.stringify(budgetLimits));
+          localStorage.setItem("business_expense_categories", JSON.stringify(businessExpenseCats));
+          localStorage.setItem("business_income_categories", JSON.stringify(businessIncomeCats));
+        }
+        window.dispatchEvent(new Event("settings-updated"));
 
-    if (familyId) {
+    if (familyId && isOwner) {
       try {
         const { error } = await supabase
           .from('families')
           .update({
-            expected_monthly_income: expectedIncome.toString()
+            expected_monthly_income: expectedIncome.toString(),
+            members: members
           })
           .eq('id', familyId);
 
@@ -404,54 +417,44 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/30 p-5 rounded-[1.5rem]">
-                <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3 flex items-center gap-1">
-                  <Key size={14} /> Vault Pairing Code
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/30 p-6 rounded-[2rem] flex flex-col items-center text-center">
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">
+                  Vault Pairing Code
                 </p>
-                <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
-                  <span className="text-2xl font-black tracking-widest text-gray-900 dark:text-white font-mono">
-                    {pairingCode || "------"}
-                  </span>
-                  <button 
-                    type="button"
-                    onClick={copyPairingCode}
-                    aria-label={copied ? 'Pairing code copied' : 'Copy pairing code'}
-                    className={`p-3 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${copied ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white active:scale-95'}`}
-                  >
-                    {copied ? <Check size={20} /> : <Copy size={20} />}
-                  </button>
-                </div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-3 font-medium px-1">
-                  Share this code with family members to let them join this vault. They will also need your Vault PIN.
+                <h2 className="text-5xl font-black text-gray-900 dark:text-white mb-2">
+                  {pairingCode || "..."}
+                </h2>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium max-w-[200px]">
+                  Share this code with your partner to link their device to this vault.
                 </p>
               </div>
 
-              {/* Members Management Section */}
-              <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-5 rounded-[1.5rem] space-y-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                  <Users size={14} /> Vault Members
-                </p>
-                {isOwner && <p className="text-[10px] text-amber-600 dark:text-amber-500 font-bold bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">Don&apos;t forget to Save Configuration after approving!</p>}
-                
-                <div className="space-y-3">
-                  {members.length === 0 ? (
-                    <p className="text-sm text-gray-400 italic py-2 text-center">No other members joined yet.</p>
-                  ) : (
-                    members.map((member, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${member.status === 'approved' ? 'bg-indigo-500' : 'bg-amber-500'}`}>
-                            {member.name.charAt(0).toUpperCase()}
+              {/* Members Management Section - Only visible to Owner */}
+              {isOwner && (
+                <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-5 rounded-[1.5rem] space-y-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                    <Users size={14} /> Vault Members
+                  </p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-500 font-bold bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">Don&apos;t forget to Save Configuration after approving!</p>
+                  
+                  <div className="space-y-3">
+                    {members.length === 0 ? (
+                      <p className="text-sm text-gray-400 italic py-2 text-center">No other members joined yet.</p>
+                    ) : (
+                      members.map((member, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${member.status === 'approved' ? 'bg-indigo-500' : 'bg-amber-500'}`}>
+                              {member.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 dark:text-white text-sm">{member.name}</p>
+                              <p className={`text-[10px] font-bold uppercase tracking-wider ${member.status === 'approved' ? 'text-indigo-500' : 'text-amber-500 animate-pulse'}`}>
+                                {member.status}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-gray-900 dark:text-white text-sm">{member.name}</p>
-                            <p className={`text-[10px] font-bold uppercase tracking-wider ${member.status === 'approved' ? 'text-indigo-500' : 'text-amber-500 animate-pulse'}`}>
-                              {member.status}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {isOwner && (
+                          
                           <div className="flex gap-2">
                             {member.status === 'pending' && (
                               <button 
@@ -476,12 +479,12 @@ export default function SettingsPage() {
                               </button>
                             )}
                           </div>
-                        )}
-                      </div>
-                    ))
-                  )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Data Management Section */}
               <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-5 rounded-[1.5rem] space-y-4">
@@ -531,33 +534,35 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Master Save Button */}
-        <button 
-          type="button"
-          onClick={handleSave} disabled={isSaving}
-          aria-live="polite"
-          className={`w-full text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 flex justify-center items-center gap-2 transform-gpu ${
-            saveStatus === 'saved' 
-              ? 'bg-emerald-500 shadow-emerald-500/20' 
-              : activeTab === 'business' 
-                ? 'bg-emerald-600 shadow-emerald-500/20' 
-                : 'bg-indigo-600 shadow-indigo-500/20'
-          }`}
-        >
-          {saveStatus === 'saving' ? (
-            <Loader2 className="animate-spin" size={20} />
-          ) : saveStatus === 'saved' ? (
-            <>
-              <CheckCircle2 size={20} />
-              Saved!
-            </>
-          ) : (
-            <>
-              <Save size={20} />
-              Save Configuration
-            </>
-          )}
-        </button>
+        {/* Master Save Button - Only visible to Owner */}
+        {isOwner && (
+          <button 
+            type="button"
+            onClick={handleSave} disabled={isSaving}
+            aria-live="polite"
+            className={`w-full text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 flex justify-center items-center gap-2 transform-gpu ${
+              saveStatus === 'saved' 
+                ? 'bg-emerald-500 shadow-emerald-500/20' 
+                : activeTab === 'business' 
+                  ? 'bg-emerald-600 shadow-emerald-500/20' 
+                  : 'bg-indigo-600 shadow-indigo-500/20'
+            }`}
+          >
+            {saveStatus === 'saving' ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : saveStatus === 'saved' ? (
+              <>
+                <CheckCircle2 size={20} />
+                Saved!
+              </>
+            ) : (
+              <>
+                <Save size={20} />
+                Save Configuration
+              </>
+            )}
+          </button>
+        )}
 
       </div>
     </div>
