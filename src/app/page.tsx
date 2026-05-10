@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowUpRight, ArrowDownRight, Settings, Sparkles, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home, Trash2, AlertTriangle, Edit2 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Settings, TrendingUp, Wallet, HandCoins, Loader2, Briefcase, Home, Trash2, AlertTriangle, Edit2 } from "lucide-react";
 import Link from "next/link";
 import { useVaultStore } from "@/lib/store";
 import { triggerHaptic } from "@/lib/utils";

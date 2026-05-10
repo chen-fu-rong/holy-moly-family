@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Wallet, Plus, HandCoins, PieChart, Bot, type LucideIcon } from "lucide-react";
+import { Home, Wallet, Plus, HandCoins, PieChart, type LucideIcon } from "lucide-react";
 import { triggerHaptic } from "@/lib/utils";
 
 export default function BottomNav() {
@@ -63,13 +63,6 @@ export default function BottomNav() {
 
           {/* Center Floating Action Button (+) */}
           <div className="absolute left-1/2 -translate-x-1/2 -top-7 z-20 flex items-center justify-center gap-3">
-            <Link 
-              href="/ai"
-              onClick={() => triggerHaptic('light')}
-              className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 p-3 rounded-full shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all duration-300 transform-gpu active:scale-95"
-            >
-              <Bot size={22} strokeWidth={2.5} />
-            </Link>
             <button 
               onClick={(e) => {
                 e.preventDefault();
@@ -100,13 +93,6 @@ export default function BottomNav() {
             if (item.isAction) {
               return (
                 <div key={item.name} className="my-2 flex flex-col gap-3">
-                  <Link 
-                    href="/ai"
-                    onClick={() => triggerHaptic('light')}
-                    className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 p-3 rounded-full shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all duration-300 transform-gpu active:scale-95"
-                  >
-                    <Bot size={20} strokeWidth={2.5} />
-                  </Link>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
