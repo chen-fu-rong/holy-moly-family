@@ -38,14 +38,28 @@ export default function FinanceAIPage() {
     const totalInc = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
     const budgetLimits = family?.budget_limits || {};
     
+    // Aggregate spending by member AND category for better AI precision
+    const spendingDetail: Record<string, { total: number, categories: Record<string, number> }> = {};
+    
+    // Use all available transactions for the summary (up to 500)
+    transactions.filter(t => t.type === 'expense').forEach(t => {
+      if (!spendingDetail[t.spender]) {
+        spendingDetail[t.spender] = { total: 0, categories: {} };
+      }
+      spendingDetail[t.spender].total += Number(t.amount);
+      spendingDetail[t.spender].categories[t.category] = (spendingDetail[t.spender].categories[t.category] || 0) + Number(t.amount);
+    });
+    
     return `
 User Name: ${myName}
+Family Members: ${JSON.stringify(family?.members || [])}
 Currency: ${currency}
 Monthly Expected Income: ${family?.expected_monthly_income || 'Not set'}
 Total Income (recent): ${totalInc}
 Total Expenses (recent): ${totalExp}
+Detailed Spending Summary: ${JSON.stringify(spendingDetail)}
 Budget Limits: ${JSON.stringify(budgetLimits)}
-Recent Transactions: ${JSON.stringify(expenses.map(t => ({ cat: t.category, amt: t.amount, note: t.notes, date: t.transaction_date })))}
+Recent Transactions (detailed): ${JSON.stringify(expenses.map(t => ({ who: t.spender, cat: t.category, amt: t.amount, note: t.notes, date: t.transaction_date })))}
     `.trim();
   }, [transactions, family, currency, myName]);
 
