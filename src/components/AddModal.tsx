@@ -269,44 +269,44 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
       />
       
       {/* Modal Content */}
-      <div role="dialog" aria-modal="true" aria-labelledby="addModalTitle" className="relative bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2.5rem] sm:rounded-[2rem] shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 z-10 border border-white/50 dark:border-gray-800 pb-8 sm:pb-6">
+      <div role="dialog" aria-modal="true" aria-labelledby="addModalTitle" className="relative bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl w-full max-w-md md:max-w-lg max-h-[90dvh] overflow-y-auto rounded-t-[2.5rem] md:rounded-[2rem] shadow-2xl animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300 z-10 border border-white/50 dark:border-gray-800 pb-8 md:pb-6">
         
         {/* Header */}
-        <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex justify-between items-center z-20">
-          <h2 id="addModalTitle" className="text-xl font-extrabold text-gray-900 dark:text-white">
+        <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-6 md:px-7 py-4 md:py-5 flex justify-between items-center z-20">
+          <h2 id="addModalTitle" className="text-lg md:text-2xl font-extrabold text-gray-900 dark:text-white">
             {initialData ? "Edit Record" : "New Record"}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Close modal" className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:text-gray-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 transition-transform">
-            <X size={20} />
+          <button type="button" onClick={onClose} aria-label="Close modal" className="p-2.5 md:p-3 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:text-gray-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 transition-transform flex-shrink-0">
+            <X size={22} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-5 md:p-7 space-y-6 md:space-y-5">
           
           {/* Income / Expense Toggle */}
-          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl" role="group" aria-label="Transaction type">
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1.5 md:p-2 rounded-2xl" role="group" aria-label="Transaction type">
             <button 
               type="button"
               onClick={() => setType("expense")} 
               aria-pressed={type === 'expense'}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${type === 'expense' ? 'bg-white dark:bg-gray-700 shadow-sm text-rose-600' : 'text-gray-500'}`}
+              className={`flex-1 py-3 md:py-3.5 rounded-xl text-sm md:text-base font-bold transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${type === 'expense' ? 'bg-white dark:bg-gray-700 shadow-sm text-rose-600' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              <ArrowDownRight size={18} /> Expense
+              <ArrowDownRight size={20} /> Expense
             </button>
             <button 
               type="button"
               onClick={() => setType("income")} 
               aria-pressed={type === 'income'}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${type === 'income' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600' : 'text-gray-500'}`}
+              className={`flex-1 py-3 md:py-3.5 rounded-xl text-sm md:text-base font-bold transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${type === 'income' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              <ArrowUpRight size={18} /> Income
+              <ArrowUpRight size={20} /> Income
             </button>
           </div>
 
           {/* Amount Input */}
           <div className="relative">
             <label htmlFor="transactionAmount" className="sr-only">Transaction amount</label>
-            <span className={`absolute left-5 top-1/2 -translate-y-1/2 font-black text-xl ${type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>{currency}</span>
+            <span className={`absolute left-5 top-1/2 -translate-y-1/2 font-black text-2xl md:text-3xl ${type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>{currency}</span>
             <input 
               id="transactionAmount"
               type="number" 
@@ -314,40 +314,40 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
               placeholder="0" 
               value={amount} 
               onChange={e => setAmount(e.target.value)} 
-              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-[1.5rem] py-5 pl-14 pr-6 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-3xl font-black text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 transition-all"
+              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-[1.5rem] py-6 md:py-7 pl-16 pr-6 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-4xl md:text-5xl font-black text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 transition-all"
               autoFocus
             />
           </div>
 
           {/* Business Toggle */}
-          <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 p-4 rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-200 dark:bg-emerald-800/50 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
-                <Briefcase size={16} />
+          <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 p-4 md:p-5 rounded-2xl">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-9 md:w-10 h-9 md:h-10 rounded-full bg-emerald-200 dark:bg-emerald-800/50 flex items-center justify-center text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                <Briefcase size={18} />
               </div>
-              <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Business Record?</span>
+              <span className="text-sm md:text-base font-bold text-emerald-900 dark:text-emerald-100">Business Record?</span>
             </div>
             <button 
               type="button"
               onClick={() => setIsBusiness(!isBusiness)} 
               aria-pressed={isBusiness}
               aria-label="Toggle business record"
-              className={`w-12 h-6 rounded-full transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isBusiness ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700'}`}
+              className={`w-12 h-7 md:w-14 h-8 rounded-full transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex-shrink-0 ${isBusiness ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700'}`}
             >
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow-sm ${isBusiness ? 'translate-x-6.5 left-0.5' : 'translate-x-0.5'}`} />
+              <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 transition-transform shadow-sm ${isBusiness ? 'translate-x-7 left-0.5' : 'translate-x-0.5'}`} />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:gap-5">
             {/* Category */}
             <div className="relative">
-              <Tags className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Tags className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <label htmlFor="transactionCategory" className="sr-only">Transaction category</label>
               <select 
                 id="transactionCategory"
                 value={category} 
                 onChange={e => setCategory(e.target.value)} 
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm font-bold text-gray-700 dark:text-gray-200 appearance-none"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-bold text-gray-700 dark:text-gray-200 appearance-none"
               >
                 {(isBusiness 
                   ? (type === 'expense' ? (bizExpenseCats.length ? bizExpenseCats : ['General Expense']) : (bizIncomeCats.length ? bizIncomeCats : ['General Income']))
@@ -360,13 +360,13 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
 
             {/* Wallet Account */}
             <div className="relative">
-              <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <label htmlFor="transactionAccount" className="sr-only">Account</label>
               <select 
                 id="transactionAccount"
                 value={account} 
                 onChange={e => setAccount(e.target.value)} 
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm font-bold text-gray-700 dark:text-gray-200 appearance-none"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-bold text-gray-700 dark:text-gray-200 appearance-none"
               >
                 {(availableAccounts.length ? availableAccounts : ['Cash']).map(acc => (
                   <option key={acc} value={acc}>{acc}</option>
@@ -377,28 +377,28 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
 
           {/* Date & Time */}
           <div className="relative">
-            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <label htmlFor="transactionDate" className="sr-only">Transaction date and time</label>
             <input 
               id="transactionDate"
               type="datetime-local" 
               value={date} 
               onChange={e => setDate(e.target.value)} 
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm font-bold text-gray-700 dark:text-gray-200" 
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-bold text-gray-700 dark:text-gray-200" 
             />
           </div>
 
           {/* Notes */}
           <div className="relative">
-            <AlignLeft className="absolute left-4 top-4 text-gray-400" size={18} />
+            <AlignLeft className="absolute left-4 top-4 text-gray-400" size={20} />
             <label htmlFor="transactionNotes" className="sr-only">Transaction notes</label>
             <textarea 
               id="transactionNotes"
               placeholder="Add a note..." 
               value={notes} 
               onChange={e => setNotes(e.target.value)} 
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm font-medium text-gray-900 dark:text-gray-100 resize-none" 
-              rows={2} 
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-900 dark:text-gray-100 resize-none" 
+              rows={3}
             />
           </div>
 
@@ -407,9 +407,9 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
             type="button"
             onClick={handleSave} 
             disabled={isSaving} 
-            className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-black py-4 rounded-2xl active:scale-95 transition-transform flex justify-center items-center shadow-lg shadow-indigo-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-black py-4 md:py-5 rounded-2xl active:scale-95 transition-transform flex justify-center items-center shadow-lg shadow-indigo-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 text-base md:text-lg h-12 md:h-14"
           >
-            {isSaving ? <Loader2 className="animate-spin" size={24} /> : "Save Transaction"}
+            {isSaving ? <Loader2 className="animate-spin" size={28} /> : "Save Transaction"}
           </button>
 
         </div>

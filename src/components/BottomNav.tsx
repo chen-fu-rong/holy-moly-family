@@ -29,17 +29,17 @@ export default function BottomNav() {
         onClick={() => triggerHaptic('light')}
         className="relative group z-10"
       >
-        <div className={`flex items-center gap-1.5 px-3 py-2.5 rounded-full transition-all duration-300 ease-out transform-gpu ${
+        <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-full transition-all duration-300 ease-out transform-gpu min-h-[44px] ${
           isActive
             ? "bg-indigo-100/80 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shadow-sm"
             : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
         }`}>
           <Icon 
-            size={20} 
+            size={22} 
             strokeWidth={isActive ? 2.5 : 2} 
-            className={`transition-transform duration-300 transform-gpu ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} 
+            className={`transition-transform duration-300 transform-gpu flex-shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} 
           />
-          <span className={`font-bold text-[11px] tracking-wide transition-all duration-300 overflow-hidden whitespace-nowrap ${
+          <span className={`font-bold text-xs tracking-wide transition-all duration-300 overflow-hidden whitespace-nowrap ${
             isActive ? "max-w-[70px] opacity-100" : "max-w-0 opacity-0"
           }`}>
             {item.name}
@@ -53,40 +53,39 @@ export default function BottomNav() {
     <>
       {/* Mobile Floating Glass Dock */}
       <nav 
-        className="md:hidden fixed left-4 right-4 z-[45] transition-all duration-300 transform-gpu"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
+        className="md:hidden fixed left-3 right-3 z-[45] transition-all duration-300 transform-gpu"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
       >
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-white/50 dark:border-gray-800 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] rounded-[2rem] px-2 py-2 flex justify-between items-center relative">
+        <div className="bg-white/85 dark:bg-gray-900/85 backdrop-blur-xl border border-white/50 dark:border-gray-800 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] rounded-[2.5rem] px-3 py-2.5 flex justify-between items-center relative">
           
           {/* Left Side Items */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {navItems.slice(0, 2).map(renderNavPill)}
           </div>
 
           {/* Center Floating Action Button (+) */}
-          <div className="absolute left-1/2 -translate-x-1/2 -top-7 z-20 flex items-center justify-center gap-3">
+          <div className="absolute left-1/2 -translate-x-1/2 -top-8 z-20 flex items-center justify-center gap-3">
             <Link 
               href="/ai"
               onClick={() => triggerHaptic('light')}
-              className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 p-3 rounded-full shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all duration-300 transform-gpu active:scale-95"
+              className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 p-3.5 rounded-full shadow-[0_10px_25px_-5px_rgba(0,0,0,0.15)] border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all duration-300 transform-gpu active:scale-95 flex items-center justify-center"
             >
-              <Bot size={22} strokeWidth={2.5} />
+              <Bot size={24} strokeWidth={2.5} />
             </Link>
             <button 
               onClick={(e) => {
                 e.preventDefault();
                 triggerHaptic('medium');
-                // THIS triggers the AddModal globally without initialData (meaning "New Record")
                 window.dispatchEvent(new CustomEvent("open-add-modal", { detail: { transaction: null } }));
               }}
-              className="bg-gradient-to-tr from-indigo-600 to-fuchsia-500 text-white p-4 rounded-full shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] hover:scale-110 hover:shadow-[0_20px_40px_-5px_rgba(79,70,229,0.7)] transition-all duration-300 transform-gpu active:scale-95"
+              className="bg-gradient-to-tr from-indigo-600 to-fuchsia-500 text-white p-5 rounded-full shadow-[0_15px_35px_-5px_rgba(79,70,229,0.5)] hover:scale-110 hover:shadow-[0_20px_45px_-5px_rgba(79,70,229,0.7)] transition-all duration-300 transform-gpu active:scale-95 flex items-center justify-center"
             >
-              <Plus size={28} strokeWidth={3} />
+              <Plus size={30} strokeWidth={3} />
             </button>
           </div>
 
           {/* Right Side Items */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {navItems.slice(3, 5).map(renderNavPill)}
           </div>
 
