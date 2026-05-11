@@ -112,7 +112,7 @@ export default function Dashboard() {
 
   return (
     <div 
-      className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] [-webkit-tap-highlight-color:transparent] transition-colors duration-500"
+      className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+6.5rem)] md:pb-6 pt-3 md:pt-4 [-webkit-tap-highlight-color:transparent] transition-colors duration-500"
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
     >
       {/* 2026 Confirmation Modal */}
