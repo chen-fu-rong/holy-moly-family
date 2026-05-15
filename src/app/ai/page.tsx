@@ -15,6 +15,7 @@ interface Message {
 export default function FinanceAIPage() {
   const transactions = useVaultStore(state => state.transactions);
   const loans = useVaultStore(state => state.loans);
+  const savingsGoals = useVaultStore(state => state.savingsGoals);
   const family = useVaultStore(state => state.family);
   const currency = useVaultStore(state => state.currency);
   const myName = typeof window !== 'undefined' ? localStorage.getItem("my_name") || "User" : "User";
@@ -33,6 +34,7 @@ export default function FinanceAIPage() {
 
   const financialContext = useMemo(() => {
     if (!transactions || transactions.length === 0) return "No transactions recorded yet.";
+    
     const expenses = transactions.filter(t => t.type === 'expense').slice(0, 50); 
     const incomes = transactions.filter(t => t.type === 'income').slice(0, 20);
     const totalExp = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
@@ -55,9 +57,11 @@ export default function FinanceAIPage() {
     let totalLent = 0;
     let totalBorrowed = 0;
     let activeLoansSummary: any = [];
+    let settleLoansSummary: any = [];
     
     if (loans && loans.length > 0) {
       const activeLoans = loans.filter(l => l.status === 'active');
+      const settledLoans = loans.filter(l => l.status === 'settled' || l.status === 'paid');
       
       activeLoans.forEach(loan => {
         if (loan.type === 'lent') {
@@ -75,25 +79,124 @@ export default function FinanceAIPage() {
         date: l.transaction_date,
         notes: l.notes
       }));
+
+      settleLoansSummary = settledLoans.map(l => ({
+        person: l.counterparty_name,
+        type: l.type,
+        amount: l.principal_amount,
+        rate: l.interest_rate,
+        status: l.status
+      }));
+    }
+
+    // Calculate savings goals progress
+    let savingsProgress: any = [];
+    let totalSavingsTarget = 0;
+    let totalSavingsCurrent = 0;
+    
+    if (savingsGoals && savingsGoals.length > 0) {
+      savingsGoals.forEach(goal => {
+        const target = Number(goal.target_amount || 0);
+        const current = Number(goal.current_amount || 0);
+        const progress = target > 0 ? Math.round((current / target) * 100) : 0;
+        
+        totalSavingsTarget += target;
+        totalSavingsCurrent += current;
+        
+        savingsProgress.push({
+          name: goal.name,
+          target: target,
+          current: current,
+          progress: progress,
+          deadline: goal.target_date,
+          status: goal.status
+        });
+      });
+    }
+
+    // Calculate budget usage
+    let budgetUsage: Record<string, any> = {};
+    if (Object.keys(budgetLimits).length > 0) {
+      const currentMonth = new Date();
+      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      
+      Object.keys(budgetLimits).forEach(category => {
+        const limit = budgetLimits[category];
+        const spent = transactions
+          .filter(t => 
+            t.type === 'expense' && 
+            t.category === category &&
+            new Date(t.transaction_date) >= monthStart
+          )
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        const percentUsed = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+        const remaining = Math.max(0, limit - spent);
+        
+        budgetUsage[category] = {
+          limit: limit,
+          spent: spent,
+          remaining: remaining,
+          percentUsed: percentUsed,
+          status: percentUsed > 100 ? 'OVER_BUDGET' : percentUsed > 80 ? 'WARNING' : 'OK'
+        };
+      });
     }
     
     return `
+=== FAMILY FINANCIAL OVERVIEW ===
 User Name: ${myName}
 Family Members: ${JSON.stringify(family?.members || [])}
 Currency: ${currency}
 Monthly Expected Income: ${family?.expected_monthly_income || 'Not set'}
-Total Income (recent): ${totalInc}
-Total Expenses (recent): ${totalExp}
-Detailed Spending Summary: ${JSON.stringify(spendingDetail)}
-Budget Limits: ${JSON.stringify(budgetLimits)}
-Recent Transactions (detailed): ${JSON.stringify(expenses.map(t => ({ who: t.spender, cat: t.category, amt: t.amount, note: t.notes, date: t.transaction_date })))}
 
-LOAN DATA:
+=== TRANSACTION SUMMARY ===
+Total Recent Income: ${totalInc} ${currency}
+Total Recent Expenses: ${totalExp} ${currency}
+Net Balance (Income - Expenses): ${totalInc - totalExp} ${currency}
+
+=== SPENDING BREAKDOWN BY MEMBER ===
+${JSON.stringify(spendingDetail, null, 2)}
+
+=== BUDGET ANALYSIS ===
+${Object.keys(budgetUsage).length > 0 ? 'Current Month Budget Status:\n' + JSON.stringify(budgetUsage, null, 2) : 'No budget limits set'}
+Overall Budget Limits: ${JSON.stringify(budgetLimits)}
+
+=== RECENT TRANSACTIONS ===
+${JSON.stringify(expenses.map(t => ({ 
+  date: t.transaction_date, 
+  spender: t.spender, 
+  category: t.category, 
+  amount: t.amount, 
+  account: t.account, 
+  note: t.notes 
+})))}
+
+=== LOAN & DEBT DATA ===
 Total Money Lent Out: ${totalLent} ${currency}
 Total Money Borrowed: ${totalBorrowed} ${currency}
-Active Loans: ${JSON.stringify(activeLoansSummary)}
+Net Loan Position: ${totalLent - totalBorrowed} ${currency}
+
+Active Loans:
+${activeLoansSummary.length > 0 ? JSON.stringify(activeLoansSummary, null, 2) : 'No active loans'}
+
+Settled/Paid Loans:
+${settleLoansSummary.length > 0 ? JSON.stringify(settleLoansSummary, null, 2) : 'No settled loans'}
+
+=== SAVINGS GOALS ===
+Total Savings Target: ${totalSavingsTarget} ${currency}
+Total Savings Accumulated: ${totalSavingsCurrent} ${currency}
+Overall Progress: ${totalSavingsTarget > 0 ? Math.round((totalSavingsCurrent / totalSavingsTarget) * 100) : 0}%
+
+Savings Goals Detail:
+${savingsProgress.length > 0 ? JSON.stringify(savingsProgress, null, 2) : 'No savings goals set'}
+
+=== FINANCIAL HEALTH SUMMARY ===
+Total Assets in Savings: ${totalSavingsCurrent} ${currency}
+Total Liabilities (Borrowed): ${totalBorrowed} ${currency}
+Net Worth from Tracked Data: ${totalSavingsCurrent - totalBorrowed} ${currency}
     `.trim();
-  }, [transactions, loans, family, currency, myName]);
+  }, [transactions, loans, savingsGoals, family, currency, myName]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
