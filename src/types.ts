@@ -17,9 +17,9 @@ export interface Loan {
   id: number;
   created_at: string;
   type: 'lent' | 'borrowed';
-  borrower_name: string;
+  counterparty_name: string;
   principal_amount: number;
   interest_rate: number;
-  start_date: string;
+  transaction_date: string;
   status?: 'active' | 'paid' | 'pending' | string;
 }

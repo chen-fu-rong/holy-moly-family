@@ -33,10 +33,8 @@ export default function FinanceAIPage() {
   const [error, setError] = useState<Error | null>(null);
 
   const financialContext = useMemo(() => {
-    if (!transactions || transactions.length === 0) return "No transactions recorded yet.";
-    
-    const expenses = transactions.filter(t => t.type === 'expense').slice(0, 50); 
-    const incomes = transactions.filter(t => t.type === 'income').slice(0, 20);
+    const expenses = transactions ? transactions.filter(t => t.type === 'expense').slice(0, 50) : []; 
+    const incomes = transactions ? transactions.filter(t => t.type === 'income').slice(0, 20) : [];
     const totalExp = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
     const totalInc = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
     const budgetLimits = family?.budget_limits || {};
@@ -45,13 +43,15 @@ export default function FinanceAIPage() {
     const spendingDetail: Record<string, { total: number, categories: Record<string, number> }> = {};
     
     // Use all available transactions for the summary (up to 500)
-    transactions.filter(t => t.type === 'expense').forEach(t => {
-      if (!spendingDetail[t.spender]) {
-        spendingDetail[t.spender] = { total: 0, categories: {} };
-      }
-      spendingDetail[t.spender].total += Number(t.amount);
-      spendingDetail[t.spender].categories[t.category] = (spendingDetail[t.spender].categories[t.category] || 0) + Number(t.amount);
-    });
+    if (transactions) {
+      transactions.filter(t => t.type === 'expense').forEach(t => {
+        if (!spendingDetail[t.spender]) {
+          spendingDetail[t.spender] = { total: 0, categories: {} };
+        }
+        spendingDetail[t.spender].total += Number(t.amount);
+        spendingDetail[t.spender].categories[t.category] = (spendingDetail[t.spender].categories[t.category] || 0) + Number(t.amount);
+      });
+    }
 
     // Calculate loan statistics
     let totalLent = 0;

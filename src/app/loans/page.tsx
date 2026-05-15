@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, ArrowUpRight, ArrowDownRight, CheckCircle2, User, AlignLeft, CalendarClock, Percent, Trash2, AlertTriangle, TrendingUp } from "lucide-react";
+import { Loader2, Plus, ArrowUpRight, ArrowDownRight, CheckCircle2, User, AlignLeft, CalendarClock, Percent, Trash2, AlertTriangle, TrendingUp, HandCoins } from "lucide-react";
 import { useVaultStore } from "@/lib/store";
 import { triggerHaptic } from "@/lib/utils";
 

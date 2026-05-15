@@ -144,14 +144,14 @@ export function generateInsights(
       insights.push({
         type: 'positive',
         title: 'Goal Achieved!',
-        description: `Congratulations! You've reached 100% of your "${goal.title}" goal!`,
+        description: `Congratulations! You've reached 100% of your "${goal.name}" goal!`,
         icon: 'CheckCircle'
       });
     } else if (progress >= 75) {
       insights.push({
         type: 'positive',
         title: 'Goal Milestone',
-        description: `You're so close! You've reached 75% of your "${goal.title}" goal.`,
+        description: `You're so close! You've reached 75% of your "${goal.name}" goal.`,
         icon: 'Target'
       });
     }
@@ -159,13 +159,13 @@ export function generateInsights(
 
   // 7. Loan Maturity Warning
   loans.filter(l => l.status === 'active' && l.type === 'borrowed').forEach(loan => {
-    const startDate = new Date(loan.start_date);
+    const startDate = new Date(loan.transaction_date);
     const diffDays = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
     if (diffDays > 30) {
       insights.push({
         type: 'warning',
         title: 'Outstanding Debt',
-        description: `Your loan from ${loan.borrower_name} has been active for ${diffDays} days. Consider settling it soon.`,
+        description: `Your loan from ${loan.counterparty_name} has been active for ${diffDays} days. Consider settling it soon.`,
         icon: 'AlertTriangle'
       });
     }
