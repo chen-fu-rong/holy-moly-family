@@ -168,35 +168,38 @@ export default function LoansPage() {
       <div className="px-4 md:px-8 max-w-3xl mx-auto pt-4 space-y-6">
         <div className="flex justify-between items-end">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Debts</h1>
-          <button onClick={() => setShowAddForm(!showAddForm)} className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-xl font-bold flex items-center gap-2 active:scale-95 transition-transform">
+          <button onClick={() => setShowAddForm(!showAddForm)} className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-xl font-bold flex items-center gap-2 active:scale-95 transition-all hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
             {showAddForm ? "Cancel" : <><Plus size={18} /> New</>}
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-gray-200/50 dark:bg-gray-800/50 p-1 rounded-2xl">
-          <button onClick={() => setViewTab("me")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${viewTab === 'me' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>My Records</button>
-          <button onClick={() => setViewTab("partner")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${viewTab === 'partner' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>Partner&apos;s</button>
+        <div className="flex bg-gray-200/50 dark:bg-gray-800/50 p-1 rounded-2xl border border-gray-200 dark:border-gray-700/50">
+          <button onClick={() => setViewTab("me")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${viewTab === 'me' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>My Records</button>
+          <button onClick={() => setViewTab("partner")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${viewTab === 'partner' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>Partner&apos;s</button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-3xl">
-            <p className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"><TrendingUp size={14}/> To Receive</p>
-            <p className="text-xl font-black text-emerald-900 dark:text-emerald-100 mt-1">{stats.totalOwedToUs.toLocaleString()} {currency}</p>
-            <p className="text-[10px] text-emerald-600/60 font-bold">Incl. Interest</p>
+          <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+            <p className="text-emerald-700 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-1"><TrendingUp size={14}/> To Receive</p>
+            <p className="text-2xl font-black text-emerald-900 dark:text-emerald-200 mb-1">{stats.totalOwedToUs.toLocaleString()} <span className="text-sm font-bold">{currency}</span></p>
+            <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">Incl. Interest</p>
           </div>
-          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-500/20 p-4 rounded-3xl">
-            <p className="text-rose-600 dark:text-rose-400 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"><ArrowDownRight size={14}/> To Pay</p>
-            <p className="text-xl font-black text-rose-900 dark:text-rose-100 mt-1">{stats.totalWeOwe.toLocaleString()} {currency}</p>
-            <p className="text-[10px] text-rose-600/60 font-bold">Incl. Interest</p>
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+            <p className="text-rose-700 dark:text-rose-400 text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-1"><ArrowDownRight size={14}/> To Pay</p>
+            <p className="text-2xl font-black text-rose-900 dark:text-rose-200 mb-1">{stats.totalWeOwe.toLocaleString()} <span className="text-sm font-bold">{currency}</span></p>
+            <p className="text-[10px] text-rose-700 dark:text-rose-400 font-bold">Incl. Interest</p>
           </div>
         </div>
 
         {showAddForm && (
-          <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800">
-            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl mb-4">
-              <button onClick={() => setType("lent")} className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${type === 'lent' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600' : 'text-gray-500'}`}>I Lent</button>
-              <button onClick={() => setType("borrowed")} className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${type === 'borrowed' ? 'bg-white dark:bg-gray-700 shadow-sm text-rose-600' : 'text-gray-500'}`}>I Borrowed</button>
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 mt-4 md:mt-6">
+            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+              <Plus size={20} /> New Debt Record
+            </h3>
+            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl mb-5">
+              <button onClick={() => setType("lent")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${type === 'lent' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600' : 'text-gray-500'}`}>I Lent</button>
+              <button onClick={() => setType("borrowed")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${type === 'borrowed' ? 'bg-white dark:bg-gray-700 shadow-sm text-rose-600' : 'text-gray-500'}`}>I Borrowed</button>
             </div>
             <div className="space-y-3">
               <div className="relative">
@@ -242,44 +245,59 @@ export default function LoansPage() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {stats.activeLoans.map(loan => (
-            <div key={loan.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm group">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${loan.type === 'lent' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100 dark:bg-rose-900/30 text-rose-600'}`}>
-                  {loan.type === 'lent' ? <TrendingUp size={18} /> : <ArrowDownRight size={18} />}
+        <div className="space-y-3 pt-2">
+          {stats.activeLoans.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <HandCoins size={40} className="mx-auto mb-3 opacity-20" />
+              <p className="font-medium">No active debts yet</p>
+            </div>
+          ) : stats.activeLoans.map(loan => (
+            <div key={loan.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-100 dark:border-gray-800 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-all group hover:border-gray-200 dark:hover:border-gray-700">
+              <div className="flex items-center gap-3 flex-1">
+                <div className={`p-3 rounded-xl transition-transform group-hover:scale-110 ${loan.type === 'lent' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400'}`}>
+                  {loan.type === 'lent' ? <TrendingUp size={20} /> : <ArrowDownRight size={20} />}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">{loan.counterparty_name}</h3>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
                     {new Date(loan.transaction_date).toLocaleDateString()} 
                     {loan.interest_rate > 0 && (
-                      <span className="text-indigo-500 font-bold ml-1 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
+                      <span className="text-indigo-600 dark:text-indigo-400 font-bold ml-2 bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 rounded text-[10px]">
                         {loan.interest_rate}% / mo
                       </span>
                     )}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className={`font-black text-sm ${loan.type === 'lent' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {loan.currentBalance.toLocaleString()} <span className="text-[10px]">{currency}</span>
+                  <p className={`font-black text-base ${loan.type === 'lent' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {loan.currentBalance.toLocaleString()} <span className="text-[11px] font-bold">{currency}</span>
                   </p>
                   {loan.interest_rate > 0 && (
-                    <p className="text-[9px] text-gray-400 font-bold">
-                      Principal: {Number(loan.principal_amount).toLocaleString()}
+                    <p className="text-[10px] text-gray-400 font-medium">
+                      P: {Number(loan.principal_amount).toLocaleString()}
                     </p>
                   )}
                 </div>
                 
                 {/* Actions: Settle and Delete */}
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => setConfirmDialog({ id: loan.id, action: 'settle', title: 'Settle Debt?' })} className="text-gray-300 hover:text-emerald-500 transition-colors p-1" title="Mark Settled">
+                <div className="flex flex-col gap-1.5 ml-2">
+                  <button 
+                    onClick={() => setConfirmDialog({ id: loan.id, action: 'settle', title: 'Settle Debt?' })} 
+                    className="text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors p-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg" 
+                    title="Mark Settled"
+                    aria-label="Mark as settled"
+                  >
                     <CheckCircle2 size={20} />
                   </button>
-                  <button onClick={() => setConfirmDialog({ id: loan.id, action: 'delete', title: 'Delete Record?' })} className="text-gray-300 hover:text-rose-500 transition-colors p-1" title="Delete Record">
-                    <Trash2 size={16} />
+                  <button 
+                    onClick={() => setConfirmDialog({ id: loan.id, action: 'delete', title: 'Delete Record?' })} 
+                    className="text-gray-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg" 
+                    title="Delete Record"
+                    aria-label="Delete this record"
+                  >
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </div>

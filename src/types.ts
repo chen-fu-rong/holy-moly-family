@@ -9,6 +9,8 @@ export interface Transaction {
   spender: string;
   account: string;
   notes?: string;
+  payer?: string;
+  payee?: string;
 }
 
 export interface Loan {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { X, Loader2, ArrowUpRight, ArrowDownRight, Briefcase, Calendar, AlignLeft, Tags, Wallet, AlertTriangle } from "lucide-react";
+import { X, Loader2, ArrowUpRight, ArrowDownRight, Briefcase, Calendar, AlignLeft, Tags, Wallet, AlertTriangle, User } from "lucide-react";
 import { triggerHaptic } from "@/lib/utils";
 import { useVaultStore } from "@/lib/store";
 import { predictCategory } from "@/lib/insights";
@@ -25,6 +25,8 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
   const [notes, setNotes] = useState("");
   const [isBusiness, setIsBusiness] = useState(false);
   const [date, setDate] = useState("");
+  const [payer, setPayer] = useState("");
+  const [payee, setPayee] = useState("");
 
   const transactions = useVaultStore(state => state.transactions);
 
@@ -75,6 +77,8 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
         setAccount(initialData.account);
         setNotes(initialData.notes || "");
         setIsBusiness(initialData.is_business_overhead);
+        setPayer(initialData.payer || "");
+        setPayee(initialData.payee || "");
         const d = new Date(initialData.transaction_date);
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
         setDate(d.toISOString().slice(0, 16));
@@ -85,6 +89,8 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
         setAccount("");
         setNotes("");
         setIsBusiness(false);
+        setPayer("");
+        setPayee("");
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         setDate(now.toISOString().slice(0, 16));
@@ -212,8 +218,6 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
         
         if (currentSpent + Number(amount) > limit) {
           triggerHaptic('warning');
-          // For now we'll use a toast warning and return. Implementing a full custom bottom sheet 
-          // confirm here would take a bit more component restructuring, but a toast is cleaner than a native confirm!
           toast.warning(`Warning: This will put you ${ (currentSpent + Number(amount) - limit).toLocaleString() } ${currency} over your budget for ${category}.`);
         }
       }
@@ -232,6 +236,8 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
       spender: initialData ? initialData.spender : myName,
       account: account || availableAccounts[0] || 'Cash',
       notes: notes,
+      payer: payer || undefined,
+      payee: payee || undefined,
       transaction_date: new Date(date).toISOString(),
       family_id: familyId,
     };
@@ -251,10 +257,11 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
       toast.error("Failed to save transaction.");
       console.error(error);
     } else {
+      triggerHaptic('success');
       toast.success(initialData ? "Transaction updated." : "Transaction saved.");
-      // Broadcast to the rest of the app to update balances instantly
       window.dispatchEvent(new Event("transaction-updated"));
-      onClose();
+      // Auto-hide modal after successful save (unless editing)
+      setTimeout(() => onClose(), 300);
     }
   };
 
@@ -283,6 +290,9 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
 
         <div className="p-5 md:p-7 space-y-6 md:space-y-5">
           
+          {/* Step Indicator */}
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Essential Details</div>
+
           {/* Income / Expense Toggle */}
           <div className="flex bg-gray-100 dark:bg-gray-800 p-1.5 md:p-2 rounded-2xl" role="group" aria-label="Transaction type">
             <button 
@@ -338,7 +348,10 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:gap-5">
+          {/* Transaction Details Section */}
+          <div className="space-y-4 pt-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Details</div>
+            <div className="grid grid-cols-2 gap-4 md:gap-5">
             {/* Category */}
             <div className="relative">
               <Tags className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -373,10 +386,47 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
                 ))}
               </select>
             </div>
+            </div>
           </div>
 
-          {/* Date & Time */}
-          <div className="relative">
+          {/* Participants Section */}
+          <div className="space-y-4 pt-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Participants</div>
+            <div className="grid grid-cols-2 gap-4 md:gap-5">
+            {/* Payer */}
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <label htmlFor="payer" className="sr-only">Payer</label>
+              <input
+                id="payer"
+                type="text"
+                placeholder={type === 'expense' ? 'Payer' : 'Income from'}
+                value={payer}
+                onChange={e => setPayer(e.target.value)}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200"
+              />
+            </div>
+
+            {/* Payee */}
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <label htmlFor="payee" className="sr-only">Payee</label>
+              <input
+                id="payee"
+                type="text"
+                placeholder={type === 'income' ? 'Payee' : 'Paid to'}
+                value={payee}
+                onChange={e => setPayee(e.target.value)}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200"
+              />
+            </div>
+            </div>
+          </div>
+
+          {/* Additional Information Section */}
+          <div className="space-y-4 pt-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Additional Info</div>
+           <div className="relative">
             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <label htmlFor="transactionDate" className="sr-only">Transaction date and time</label>
             <input 
@@ -386,28 +436,29 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
               onChange={e => setDate(e.target.value)} 
               className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-bold text-gray-700 dark:text-gray-200" 
             />
-          </div>
+            </div>
 
-          {/* Notes */}
-          <div className="relative">
-            <AlignLeft className="absolute left-4 top-4 text-gray-400" size={20} />
-            <label htmlFor="transactionNotes" className="sr-only">Transaction notes</label>
-            <textarea 
-              id="transactionNotes"
-              placeholder="Add a note..." 
-              value={notes} 
-              onChange={e => setNotes(e.target.value)} 
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-900 dark:text-gray-100 resize-none" 
+            {/* Notes */}
+            <div className="relative">
+              <AlignLeft className="absolute left-4 top-4 text-gray-400" size={20} />
+              <label htmlFor="transactionNotes" className="sr-only">Transaction notes</label>
+              <textarea 
+                id="transactionNotes"
+                placeholder="Add a note..." 
+                value={notes} 
+                onChange={e => setNotes(e.target.value)} 
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-900 dark:text-gray-100 resize-none"
               rows={3}
             />
+            </div>
           </div>
 
-          {/* Save Button */}
+          {/* Save Button - Prominent CTA */}
           <button 
             type="button"
             onClick={handleSave} 
             disabled={isSaving} 
-            className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-black py-4 md:py-5 rounded-2xl active:scale-95 transition-transform flex justify-center items-center shadow-lg shadow-indigo-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 text-base md:text-lg h-12 md:h-14"
+            className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-black py-4 md:py-5 rounded-2xl active:scale-95 transition-transform flex justify-center items-center shadow-lg shadow-indigo-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 text-base md:text-lg h-12 md:h-14 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? <Loader2 className="animate-spin" size={28} /> : "Save Transaction"}
           </button>

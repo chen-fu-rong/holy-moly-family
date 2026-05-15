@@ -14,6 +14,7 @@ interface Message {
 
 export default function FinanceAIPage() {
   const transactions = useVaultStore(state => state.transactions);
+  const loans = useVaultStore(state => state.loans);
   const family = useVaultStore(state => state.family);
   const currency = useVaultStore(state => state.currency);
   const myName = typeof window !== 'undefined' ? localStorage.getItem("my_name") || "User" : "User";
@@ -49,6 +50,32 @@ export default function FinanceAIPage() {
       spendingDetail[t.spender].total += Number(t.amount);
       spendingDetail[t.spender].categories[t.category] = (spendingDetail[t.spender].categories[t.category] || 0) + Number(t.amount);
     });
+
+    // Calculate loan statistics
+    let totalLent = 0;
+    let totalBorrowed = 0;
+    let activeLoansSummary: any = [];
+    
+    if (loans && loans.length > 0) {
+      const activeLoans = loans.filter(l => l.status === 'active');
+      
+      activeLoans.forEach(loan => {
+        if (loan.type === 'lent') {
+          totalLent += Number(loan.principal_amount);
+        } else {
+          totalBorrowed += Number(loan.principal_amount);
+        }
+      });
+
+      activeLoansSummary = activeLoans.map(l => ({
+        person: l.counterparty_name,
+        type: l.type,
+        amount: l.principal_amount,
+        rate: l.interest_rate,
+        date: l.transaction_date,
+        notes: l.notes
+      }));
+    }
     
     return `
 User Name: ${myName}
@@ -60,8 +87,13 @@ Total Expenses (recent): ${totalExp}
 Detailed Spending Summary: ${JSON.stringify(spendingDetail)}
 Budget Limits: ${JSON.stringify(budgetLimits)}
 Recent Transactions (detailed): ${JSON.stringify(expenses.map(t => ({ who: t.spender, cat: t.category, amt: t.amount, note: t.notes, date: t.transaction_date })))}
+
+LOAN DATA:
+Total Money Lent Out: ${totalLent} ${currency}
+Total Money Borrowed: ${totalBorrowed} ${currency}
+Active Loans: ${JSON.stringify(activeLoansSummary)}
     `.trim();
-  }, [transactions, family, currency, myName]);
+  }, [transactions, loans, family, currency, myName]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -146,16 +178,16 @@ Recent Transactions (detailed): ${JSON.stringify(expenses.map(t => ({ who: t.spe
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-950">
       <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-4 py-4 pt-[calc(env(safe-area-inset-top)+1rem)] flex items-center gap-3 shadow-sm">
-        <Link href="/" className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full active:scale-95 transition-transform text-gray-600 dark:text-gray-300">
+        <Link href="/" className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full active:scale-95 transition-all hover:bg-gray-200 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" aria-label="Go back">
           <ArrowLeft size={20} />
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-fuchsia-500 rounded-full flex items-center justify-center shadow-md">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-fuchsia-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
             <Sparkles size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-gray-900 dark:text-white leading-tight">Finance AI</h1>
-            <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-wider">Smart Advisor</p>
+            <h1 className="font-extrabold text-gray-900 dark:text-white leading-tight text-lg">Finance AI</h1>
+            <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Smart Advisor</p>
           </div>
         </div>
       </div>
@@ -200,20 +232,23 @@ Recent Transactions (detailed): ${JSON.stringify(expenses.map(t => ({ who: t.spe
         <div ref={messagesEndRef} className="h-2" />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 z-50 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-950 dark:via-gray-950 to-transparent pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="fixed bottom-0 left-0 right-0 p-4 z-50 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent dark:from-gray-950 dark:via-gray-950 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <form 
           onSubmit={handleFormSubmit}
-          className="max-w-4xl mx-auto relative flex items-center shadow-2xl rounded-full overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 transition-all"
+          className="max-w-4xl mx-auto relative flex items-center shadow-2xl rounded-full overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all"
         >
           <input
             value={localInput}
             onChange={(e) => setLocalInput(e.target.value)}
-            placeholder="Ask about your budget..."
-            className="w-full py-4 pl-6 pr-14 bg-transparent outline-none text-base md:text-sm text-gray-900 dark:text-white placeholder-gray-400 font-medium"
+            placeholder="Ask about your loans, budget, spending..."
+            aria-label="Chat input"
+            className="w-full py-4 pl-6 pr-14 bg-transparent outline-none text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 font-medium"
           />
           <button 
             type="submit" 
-            className={`absolute right-2 p-2.5 text-white rounded-full transition-colors flex items-center justify-center ${(!localInput || !localInput.trim() || isLoading) ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-indigo-600 active:scale-95'}`}
+            disabled={!localInput || !localInput.trim() || isLoading}
+            aria-label="Send message"
+            className={`absolute right-2 p-2.5 text-white rounded-full transition-all flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${(!localInput || !localInput.trim() || isLoading) ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-indigo-600 active:scale-95 hover:bg-indigo-700'}`}
           >
             <Send size={18} className="translate-x-[-1px] translate-y-[1px]" />
           </button>
