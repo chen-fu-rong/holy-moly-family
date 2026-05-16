@@ -243,8 +243,8 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
       spender: initialData ? initialData.spender : myName,
       account: account || availableAccounts[0] || 'Cash',
       notes: notes,
-      payer: payer || undefined,
-      payee: payee || undefined,
+      payer: type === 'income' ? (payer || undefined) : undefined,
+      payee: type === 'expense' ? (payee || undefined) : undefined,
       transaction_date: new Date(date).toISOString(),
       family_id: familyId,
     };
@@ -399,34 +399,34 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
           {/* Participants Section */}
           <div className="space-y-4 pt-2">
             <div className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Participants</div>
-            <div className="grid grid-cols-2 gap-4 md:gap-5">
-            {/* Payer */}
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <label htmlFor="payer" className="sr-only">Payer</label>
-              <input
-                id="payer"
-                type="text"
-                placeholder={type === 'expense' ? 'Payer' : 'Income from'}
-                value={payer}
-                onChange={e => setPayer(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200"
-              />
-            </div>
-
-            {/* Payee */}
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <label htmlFor="payee" className="sr-only">Payee</label>
-              <input
-                id="payee"
-                type="text"
-                placeholder={type === 'income' ? 'Payee' : 'Paid to'}
-                value={payee}
-                onChange={e => setPayee(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200"
-              />
-            </div>
+            <div className="grid grid-cols-1 gap-4 md:gap-5">
+              {type === 'income' ? (
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <label htmlFor="payer" className="sr-only">Payer</label>
+                  <input
+                    id="payer"
+                    type="text"
+                    placeholder="Income from"
+                    value={payer}
+                    onChange={e => setPayer(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200"
+                  />
+                </div>
+              ) : (
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <label htmlFor="payee" className="sr-only">Payee</label>
+                  <input
+                    id="payee"
+                    type="text"
+                    placeholder="Paid to"
+                    value={payee}
+                    onChange={e => setPayee(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3.5 md:py-4 pl-12 pr-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
