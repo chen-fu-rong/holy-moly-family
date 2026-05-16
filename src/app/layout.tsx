@@ -10,6 +10,12 @@ export const metadata: Metadata = {
   title: "Holy Moly Family",
   description: "Household and business finance tracker.",
   manifest: "/manifest.json",
+  icons: [
+    { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
+    { rel: 'icon', url: '/favicon.ico' },
+    { rel: 'shortcut icon', url: '/favicon.ico' },
+    { rel: 'apple-touch-icon', url: '/favicon.svg' },
+  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
