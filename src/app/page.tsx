@@ -8,6 +8,7 @@ import { useVaultStore } from "@/lib/store";
 import { triggerHaptic } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import FinanceInsights from "@/components/FinanceInsights";
+import TransactionDetailModal from "@/components/TransactionDetailModal";
 
 export default function Dashboard() {
   const isOwner = useVaultStore(state => state.isOwner);
@@ -21,6 +22,7 @@ export default function Dashboard() {
   // Workspace State
   const [workspace, setWorkspace] = useState<"personal" | "business">("personal");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
   useEffect(() => {
     setMyName(localStorage.getItem("my_name") || "Me");
@@ -115,42 +117,19 @@ export default function Dashboard() {
       className="relative min-h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+6.5rem)] md:pb-6 pt-3 md:pt-4 [-webkit-tap-highlight-color:transparent] transition-colors duration-500"
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
     >
-      {/* 2026 Confirmation Modal */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl md:rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center gap-4 md:gap-5">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600">
-                <AlertTriangle size={36} />
-              </div>
-              <div>
-                <h3 className="text-lg md:text-2xl font-black text-gray-900 dark:text-white">Delete Transaction?</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mt-2">This action cannot be undone. Are you sure?</p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-8">
-              <button 
-                onClick={() => {
-                  setConfirmDelete(null);
-                  triggerHaptic('light');
-                }} 
-                className="flex-1 py-3 md:py-4 font-bold rounded-xl text-base md:text-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white active:scale-95 transition-transform h-12 md:h-14"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => {
-                  handleDelete(confirmDelete!);
-                  triggerHaptic('heavy');
-                }} 
-                className="flex-1 py-3 md:py-4 font-bold rounded-xl text-base md:text-lg bg-rose-600 text-white active:scale-95 transition-transform h-12 md:h-14"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
+        isOpen={selectedTransaction !== null}
+        transaction={selectedTransaction}
+        currency={currency}
+        isOwner={isOwner}
+        onClose={() => setSelectedTransaction(null)}
+        onEdit={(tx) => {
+          setSelectedTransaction(null);
+          window.dispatchEvent(new CustomEvent("open-add-modal", { detail: { transaction: tx } }));
+        }}
+        onDelete={(id) => handleDelete(id)}
+      />
 
       {/* Dynamic Workspace Background */}
       <div className="fixed inset-0 z-[-1] overflow-hidden bg-gray-50 dark:bg-gray-950 pointer-events-none transform-gpu transition-colors duration-700">
@@ -283,40 +262,15 @@ export default function Dashboard() {
               <p className="text-center text-gray-500 text-sm md:text-base py-6 md:py-8 font-medium">No activity in this workspace yet.</p>
             ) : (
               activeTransactions.map((tx: any) => (
-                <div key={tx.id} className="relative rounded-2xl overflow-hidden group shadow-sm">
-                  {/* Background Action: Edit & Delete */}
-                  {isOwner && (
-                    <div className="absolute inset-y-0 right-0 w-28 md:w-32 flex items-center justify-end">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerHaptic('light');
-                          window.dispatchEvent(new CustomEvent("open-add-modal", { detail: { transaction: tx } }));
-                        }}
-                        className="w-14 md:w-16 h-full bg-indigo-500 hover:bg-indigo-600 flex items-center justify-center transition-colors active:bg-indigo-700"
-                      >
-                        <Edit2 className="text-white" size={22} />
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerHaptic('medium');
-                          setConfirmDelete(tx.id);
-                        }}
-                        className="w-14 md:w-16 h-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center transition-colors active:bg-rose-700"
-                      >
-                        <Trash2 className="text-white" size={22} />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Swipeable Foreground Card */}
-                  <motion.div
-                    drag={isOwner ? "x" : false}
-                    dragConstraints={{ left: -128, right: 0 }}
-                    dragElastic={0.05}
-                    className="relative z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-100 dark:border-gray-800 p-4 md:p-5 rounded-2xl flex items-center justify-between transform-gpu active:scale-[0.98] transition-transform"
-                  >
+                <button
+                  key={tx.id}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSelectedTransaction(tx);
+                  }}
+                  className="w-full text-left rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
+                >
+                  <div className="relative z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-100 dark:border-gray-800 p-4 md:p-5 rounded-2xl flex items-center justify-between">
                     <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                       <div className={`p-2.5 md:p-3 rounded-xl flex-shrink-0 ${tx.type === 'income' ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-600' : 'bg-rose-100/80 dark:bg-rose-900/30 text-rose-600'}`}>
                         {tx.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
@@ -343,8 +297,8 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                  </motion.div>
-                </div>
+                  </div>
+                </button>
               ))
             )}
           </div>
