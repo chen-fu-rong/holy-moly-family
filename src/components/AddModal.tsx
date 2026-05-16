@@ -228,6 +228,13 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
     const familyId = localStorage.getItem("family_id");
     const myName = localStorage.getItem("my_name") || "Me";
 
+    if (!familyId) {
+      setIsSaving(false);
+      toast.error("Unable to save transaction: vault not found.");
+      console.error("Missing family_id in localStorage when saving transaction.");
+      return;
+    }
+
     const payload = {
       amount: Number(amount),
       category: category || (type === 'expense' ? 'General Expense' : 'General Income'),
@@ -254,7 +261,7 @@ export default function AddModal({ isOpen, onClose, initialData }: AddModalProps
     setIsSaving(false);
 
     if (error) {
-      toast.error("Failed to save transaction.");
+      toast.error(error.message || "Failed to save transaction.");
       console.error(error);
     } else {
       triggerHaptic('success');

@@ -103,26 +103,32 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   addTransaction: async (payload: any) => {
     const { data, error } = await supabase.from('transactions').insert([payload]).select();
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       set(state => ({
         transactions: [data[0], ...state.transactions].sort((a, b) => 
           new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
         ).slice(0, 500)
       }));
     }
-    return { error };
+
+    return {
+      error: error || (data && data.length === 0 ? new Error('No transaction row returned from insert.') : null)
+    };
   },
 
   editTransaction: async (id: string, payload: any) => {
     const { data, error } = await supabase.from('transactions').update(payload).eq('id', id).select();
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       set(state => ({
         transactions: state.transactions.map(t => t.id === id ? data[0] : t).sort((a, b) => 
           new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
         )
       }));
     }
-    return { error };
+
+    return {
+      error: error || (data && data.length === 0 ? new Error('No transaction row returned from update.') : null)
+    };
   },
 
   addLoan: async (payload: any) => {
